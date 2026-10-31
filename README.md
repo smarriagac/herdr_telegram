@@ -163,13 +163,25 @@ To enable topic isolation:
 - `/enter`: Sends `Enter` (useful when approving prompts).
 - `/yes`: Sends `y` + `Enter`.
 - `/esc`: Sends `Escape` to cancel an open dialog.
+- `/resume`: Resumes this agent's session if it was stopped.
 - `/close`: Closes the Herdr workspace and archives the topic.
 
 ### In General Topic or Private Chat
-- `/status` or `/agents`: Displays interactive dashboard of all workspaces.
+- `/status` or `/agents`: Displays interactive dashboard of all workspaces with active session IDs.
 - `/new <name> [engine]`: Creates a project folder, spawns a Herdr workspace, launches the agent (default: `agy`), and creates a Telegram topic.
+- `/resume <name>`: Resumes an existing project agent preserving previous conversation context.
 - `/read <name>`: Reads the terminal of a specific workspace.
 - `/help`: Displays available commands.
+
+---
+
+## Session Persistence Architecture
+
+The bridge does not require an external database to persist conversations. It leverages the agent's native local storage:
+1. When an agent runs, Herdr tracks its unique session UUID (`session_id`).
+2. The bridge automatically synchronizes `session_id` into `topics.json` for each project.
+3. Transcripts remain stored in JSONL format on local disk by the agent runtime (`~/.gemini/antigravity-cli/brain/<session_id>/transcript.jsonl`).
+4. Running `/resume <name>` relaunches the agent passing `--conversation <session_id>`, fully restoring the chat history and context without any database overhead.
 
 ---
 

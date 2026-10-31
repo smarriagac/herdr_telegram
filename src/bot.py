@@ -119,6 +119,56 @@ def save_topics(topics):
             print(f"Error saving topics.json: {e}", file=sys.stderr)
 
 
+def get_topic_thread_id(entry):
+    if isinstance(entry, dict):
+        return entry.get("thread_id")
+    return entry
+
+
+def get_topic_session_id(entry):
+    if isinstance(entry, dict):
+        return entry.get("session_id")
+    return None
+
+
+def get_topic_kind(entry):
+    if isinstance(entry, dict):
+        return entry.get("kind", "agy")
+    return "agy"
+
+
+def sync_agent_sessions(agents):
+    """Automatically synchronizes agent session IDs into topics.json."""
+    if not agents:
+        return
+    topics = load_topics()
+    changed = False
+    for ag in agents:
+        ws_label = ag.get("workspace_label")
+        if not ws_label:
+            continue
+        session_id = ag.get("agent_session", {}).get("value")
+        kind = ag.get("agent", "agy")
+        if ws_label in topics:
+            entry = topics[ws_label]
+            if isinstance(entry, dict):
+                if session_id and entry.get("session_id") != session_id:
+                    entry["session_id"] = session_id
+                    changed = True
+                if kind and entry.get("kind") != kind:
+                    entry["kind"] = kind
+                    changed = True
+            else:
+                topics[ws_label] = {
+                    "thread_id": entry,
+                    "session_id": session_id,
+                    "kind": kind,
+                }
+                changed = True
+    if changed:
+        save_topics(topics)
+
+
 def call_telegram_api(method, payload):
     url = f"{API_BASE}/{method}"
     data = json.dumps(payload).encode("utf-8")
@@ -187,14 +237,33 @@ def answer_callback(callback_query_id, text=None):
     return call_telegram_api("answerCallbackQuery", payload)
 
 
-def ensure_topic_for_workspace(ws_label):
+def ensure_topic_for_workspace(ws_label, session_id=None, kind="agy"):
     if not GROUP_CHAT_ID:
         return None
 
     clean_label = ws_label.strip()
     topics = load_topics()
     if clean_label in topics:
-        return topics[clean_label]
+        entry = topics[clean_label]
+        if isinstance(entry, dict):
+            changed = False
+            if session_id and entry.get("session_id") != session_id:
+                entry["session_id"] = session_id
+                changed = True
+            if kind and entry.get("kind") != kind:
+                entry["kind"] = kind
+                changed = True
+            if changed:
+                save_topics(topics)
+            return entry.get("thread_id")
+        else:
+            topics[clean_label] = {
+                "thread_id": entry,
+                "session_id": session_id,
+                "kind": kind,
+            }
+            save_topics(topics)
+            return entry
 
     topic_name = f"📁 {clean_label}"
     res = call_telegram_api(
@@ -206,7 +275,11 @@ def ensure_topic_for_workspace(ws_label):
     )
     if res and res.get("ok"):
         thread_id = res["result"]["message_thread_id"]
-        topics[clean_label] = thread_id
+        topics[clean_label] = {
+            "thread_id": thread_id,
+            "session_id": session_id,
+            "kind": kind,
+        }
         save_topics(topics)
 
         kb = [
@@ -251,14 +324,16 @@ def close_topic_for_workspace(ws_label):
     clean_label = ws_label.strip()
     topics = load_topics()
     if clean_label in topics:
-        thread_id = topics[clean_label]
-        call_telegram_api(
-            "closeForumTopic",
-            {
-                "chat_id": GROUP_CHAT_ID,
-                "message_thread_id": thread_id,
-            },
-        )
+        entry = topics[clean_label]
+        thread_id = get_topic_thread_id(entry)
+        if thread_id:
+            call_telegram_api(
+                "closeForumTopic",
+                {
+                    "chat_id": GROUP_CHAT_ID,
+                    "message_thread_id": thread_id,
+                },
+            )
         del topics[clean_label]
         save_topics(topics)
 
@@ -293,6 +368,10 @@ def setup_bot_commands():
     commands = [
         {"command": "status", "description": "Panel visual de agentes"},
         {"command": "new", "description": "Crear nuevo agente (/new <nombre>)"},
+        {
+            "command": "resume",
+            "description": "Reanudar sesión de agente (/resume <nombre>)",
+        },
         {"command": "read", "description": "Ver terminal del agente"},
         {
             "command": "enter",
@@ -464,9 +543,14 @@ def build_status_reply():
         ws_label = ag.get("workspace_label") or pid
         btn_label = ag.get("name") or ws_label
 
+        session_id = ag.get("agent_session", {}).get("value")
+        session_short = (
+            f" · Sesión: <code>{session_id[:8]}...</code>" if session_id else ""
+        )
         lines.append(f"╭─ 📁 <b>{display_name}</b>{focused}")
         lines.append(
-            f"│  🆔 Panel: <code>{pid}</code> · Motor: <code>{agent_type}</code>"
+            f"│  🆔 Panel: <code>{pid}</code> · Motor:"
+            f" <code>{agent_type}</code>{session_short}"
         )
         lines.append(f"│  {status_info['icon']} <b>{status_info['label']}</b>")
         lines.append("╰──────────────────────────\n")
@@ -590,6 +674,110 @@ def handle_new(args):
         f"│  📂 Ruta: <code>{proj_path}</code>\n"
         "╰──────────────────────────\n\n"
         f"💡 <i>Se creó el tema <b>#📁 {clean_name}</b> en el grupo. Podés escribirle directamente ahí.</i>"
+    )
+    return msg, markup
+
+
+def handle_resume(args):
+    """Resumes an existing agent session using its saved session_id."""
+    if not args:
+        return "Uso: /resume <nombre_proyecto>\nEjemplo: /resume deportivo", None
+
+    clean_name = args[0].strip().lower()
+    topics = load_topics()
+    entry = topics.get(clean_name)
+    saved_session_id = get_topic_session_id(entry)
+    saved_kind = get_topic_kind(entry) or "agy"
+
+    agents, _ = get_agent_list_with_metadata()
+    for ag in (agents or []):
+        if (ag.get("workspace_label") or "").lower() == clean_name:
+            st = ag.get("agent_status", "unknown")
+            return (
+                f"ℹ️ El agente <b>{clean_name}</b> ya está activo en Herdr"
+                f" (Estado: {st}).",
+                None,
+            )
+
+    code_ws, out_ws, _ = run_herdr_cmd(["workspace", "list"])
+    ws_id = None
+    if code_ws == 0 and out_ws:
+        for w in json.loads(out_ws).get("result", {}).get("workspaces", []):
+            if (w.get("label") or "").lower() == clean_name:
+                ws_id = w.get("workspace_id")
+                break
+
+    proj_path = os.path.join(PROJECTS_DIR, clean_name)
+    pane_id = None
+
+    if not ws_id:
+        os.makedirs(proj_path, exist_ok=True)
+        code, out, err = run_herdr_cmd(
+            ["workspace", "create", "--label", clean_name, "--cwd", proj_path]
+        )
+        if code != 0 or not out:
+            return f"❌ Error creando workspace: {html.escape(err or out)}", None
+        try:
+            data = json.loads(out)
+            pane_id = data["result"]["root_pane"]["pane_id"]
+            ws_id = data["result"]["workspace"]["workspace_id"]
+        except Exception as e:
+            return (
+                f"❌ Error procesando respuesta de Herdr: {html.escape(str(e))}",
+                None,
+            )
+    else:
+        code_p, out_p, _ = run_herdr_cmd(["pane", "list"])
+        if code_p == 0 and out_p:
+            for p in json.loads(out_p).get("result", {}).get("panes", []):
+                if p.get("workspace_id") == ws_id:
+                    pane_id = p.get("pane_id")
+                    break
+
+    if not pane_id:
+        return (
+            f"❌ No se encontró un panel libre en el workspace {clean_name}.",
+            None,
+        )
+
+    cmd = ["agent", "start", clean_name, "--kind", saved_kind, "--pane", pane_id]
+    if saved_session_id and saved_kind == "agy":
+        cmd.extend(["--", "--conversation", saved_session_id])
+
+    code_ag, out_ag, err_ag = run_herdr_cmd(cmd, timeout=35)
+    if code_ag != 0:
+        return (
+            f"❌ Error reanudando agente ({saved_kind}):"
+            f" {html.escape(err_ag or out_ag)}",
+            None,
+        )
+
+    thread_id = ensure_topic_for_workspace(
+        clean_name, saved_session_id, saved_kind
+    )
+
+    session_msg = (
+        f"Sesión recuperada: <code>{saved_session_id[:8]}...</code>"
+        if saved_session_id
+        else "Nueva sesión"
+    )
+    markup = {
+        "inline_keyboard": [
+            [
+                {
+                    "text": f"📄 Ver Terminal [{clean_name}]",
+                    "callback_data": f"act|read|{pane_id}",
+                }
+            ],
+            [{"text": "📋 Ver Panel Principal", "callback_data": "act|refresh"}],
+        ]
+    }
+    msg = (
+        f"🔄 <b>¡Agente {clean_name} reanudado exitosamente!</b>\n\n"
+        f"• Proyecto: 📁 <b>{clean_name}</b>\n"
+        f"• Panel: <code>{pane_id}</code>\n"
+        f"• {session_msg}\n\n"
+        "<i>El contexto previo de la conversación está preservado en disco.</i>"
     )
     return msg, markup
 
@@ -1004,8 +1192,8 @@ def process_message(msg):
 
     matched_workspace = None
     if chat_id == GROUP_CHAT_ID and thread_id:
-        for ws, t_id in topics.items():
-            if t_id == thread_id:
+        for ws, entry in topics.items():
+            if get_topic_thread_id(entry) == thread_id:
                 matched_workspace = ws
                 break
 
@@ -1107,6 +1295,11 @@ def process_message(msg):
         send_message(
             chat_id, text_resp, reply_markup=markup, message_thread_id=thread_id
         )
+    elif cmd == "/resume":
+        text_resp, markup = handle_resume(args)
+        send_message(
+            chat_id, text_resp, reply_markup=markup, message_thread_id=thread_id
+        )
     elif cmd == "/close":
         text_resp, markup = handle_close(args)
         send_message(
@@ -1171,6 +1364,7 @@ def state_watcher_thread():
         try:
             agents, err = get_agent_list_with_metadata()
             if agents is not None:
+                sync_agent_sessions(agents)
                 current_pids = set()
                 for ag in agents:
                     pid = ag.get("pane_id")
@@ -1178,8 +1372,10 @@ def state_watcher_thread():
                     ws_label = ag.get("workspace_label") or pid
                     current_pids.add(pid)
 
+                    session_id = ag.get("agent_session", {}).get("value")
+                    kind = ag.get("agent", "agy")
                     thread_id = (
-                        ensure_topic_for_workspace(ws_label)
+                        ensure_topic_for_workspace(ws_label, session_id, kind)
                         if GROUP_CHAT_ID
                         else None
                     )
