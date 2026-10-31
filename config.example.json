@@ -1,0 +1,7 @@
+{
+  "bot_token": "YOUR_TELEGRAM_BOT_TOKEN",
+  "allowed_chat_id": 123456789,
+  "group_chat_id": -1001234567890,
+  "herdr_bin": "herdr",
+  "projects_dir": "~/proyectos"
+}

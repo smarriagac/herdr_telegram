@@ -1,0 +1,16 @@
+[Unit]
+Description=Herdr Telegram Bridge Daemon
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 %h/.config/herdr-telegram/bot.py
+WorkingDirectory=%h/.config/herdr-telegram
+Restart=always
+RestartSec=5
+Environment=PYTHONUNBUFFERED=1
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+
+[Install]
+WantedBy=default.target
