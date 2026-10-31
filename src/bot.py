@@ -8,6 +8,7 @@ import html
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import threading
@@ -17,7 +18,7 @@ import urllib.request
 
 
 def resolve_paths():
-    """Resolves config.json and topics.json paths with sensible fallbacks."""
+    """Resolves config.json and topics.json paths with sensible fallbacks across OSes."""
     env_cfg = os.environ.get("HERDR_TELEGRAM_CONFIG")
     if env_cfg and os.path.exists(env_cfg):
         cfg_dir = os.path.dirname(os.path.abspath(env_cfg))
@@ -33,6 +34,15 @@ def resolve_paths():
     if os.path.exists(root_cfg):
         return root_cfg, os.path.join(os.path.dirname(root_cfg), "topics.json")
 
+    # Windows AppData standard path check
+    if sys.platform == "win32" and os.environ.get("APPDATA"):
+        win_cfg_dir = os.path.join(os.environ["APPDATA"], "herdr-telegram")
+        if os.path.exists(os.path.join(win_cfg_dir, "config.json")):
+            return os.path.join(win_cfg_dir, "config.json"), os.path.join(
+                win_cfg_dir, "topics.json"
+            )
+
+    # Standard ~/.config/herdr-telegram fallback (Linux, macOS, and Unix-like environments)
     user_cfg_dir = os.path.expanduser("~/.config/herdr-telegram")
     return os.path.join(user_cfg_dir, "config.json"), os.path.join(
         user_cfg_dir, "topics.json"
@@ -55,7 +65,8 @@ with open(CONFIG_PATH, "r", encoding="utf-8") as f:
 BOT_TOKEN = config["bot_token"]
 ALLOWED_CHAT_ID = int(config["allowed_chat_id"])
 GROUP_CHAT_ID = config.get("group_chat_id")
-HERDR_BIN = os.path.expanduser(config.get("herdr_bin", "herdr"))
+raw_herdr_bin = os.path.expanduser(config.get("herdr_bin", "herdr"))
+HERDR_BIN = shutil.which(raw_herdr_bin) or raw_herdr_bin
 PROJECTS_DIR = os.path.expanduser(config.get("projects_dir", "~/proyectos"))
 API_BASE = f"https://api.telegram.org/bot{BOT_TOKEN}"
 

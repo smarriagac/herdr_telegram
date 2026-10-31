@@ -11,8 +11,8 @@ flowchart LR
         Direct["Private Chat\n(Admin)"]
     end
 
-    subgraph Host["Host Machine"]
-        Daemon["herdr-telegram-bridge\n(Python Daemon / systemd)"]
+    subgraph Host["Host Machine (Linux / macOS / Windows)"]
+        Daemon["herdr-telegram-bridge\n(Python Daemon)"]
         Socket["Herdr Socket API\n(~/.config/herdr/herdr.sock)"]
         
         subgraph Agents["Herdr Workspaces"]
@@ -31,45 +31,104 @@ flowchart LR
 
 ## Features
 
+- **Cross-Platform**: Native daemon support for **Linux** (`systemd --user`), **macOS** (`launchd`), and **Windows** (Task Scheduler with `pythonw.exe` or WSL2).
 - **Zero External Dependencies**: Built entirely using Python's standard library (`urllib`, `subprocess`, `json`, `threading`). No virtual environment or `pip install` required.
 - **Isolated Forum Topics**: Automatically manages dedicated Telegram topics for each Herdr workspace. Decisions, notifications, and prompts stay isolated without polluting each other's context.
 - **Direct Prompting**: Inside any project topic, typing plain natural language immediately submits a prompt to that agent without requiring `/prompt` commands.
 - **Interactive Inline Buttons**: Approve permission requests (`Enter`, `Yes`, `Cancel`), view live terminal outputs, or refresh the status panel with tactile touch controls.
-- **Background Persistence**: Runs as an unprivileged `systemd --user` service with user lingering enabled, ensuring agents and the bot remain active even after graphical logout.
+- **Background Persistence**: Runs headlessly in the background, surviving sleep, logout, and terminal disconnects.
 
 ---
 
 ## Prerequisites
 
-1. **Linux OS** with `systemd`.
-2. **Python 3.8+** (`python3`).
-3. **Herdr** installed (`~/.local/bin/herdr` or in `PATH`).
-4. A **Telegram Bot Token** from [@BotFather](https://t.me/BotFather).
+1. **Python 3.8+** (`python3` on Linux/macOS, `python.exe` / `pythonw.exe` on Windows).
+2. **Herdr** installed and accessible in `PATH`.
+3. A **Telegram Bot Token** from [@BotFather](https://t.me/BotFather).
 
 ---
 
-## Quick Start / Installation
+## Installation by Operating System
 
-### 1. Clone the repository
+### 🐧 Linux (systemd)
+
 ```bash
 git clone <repo-url> ~/proyectos/herdr-telegram-bridge
 cd ~/proyectos/herdr-telegram-bridge
-```
-
-### 2. Run the installer
-```bash
 ./install.sh
 ```
-The installer copies the daemon script to `~/.config/herdr-telegram/bot.py`, installs the systemd unit to `~/.config/systemd/user/herdr-telegram.service`, reloads systemd, and enables lingering (`loginctl enable-linger`).
 
-### 3. Configure credentials
-Edit `~/.config/herdr-telegram/config.json`:
+- Edit `~/.config/herdr-telegram/config.json` with your credentials.
+- Service management:
+  ```bash
+  systemctl --user status herdr-telegram.service
+  journalctl --user -u herdr-telegram.service -f
+  ```
+
+---
+
+### 🍏 macOS (launchd)
+
+```bash
+git clone <repo-url> ~/proyectos/herdr-telegram-bridge
+cd ~/proyectos/herdr-telegram-bridge
+./install.sh
+```
+The installer automatically detects macOS and installs a `launchd` user agent at `~/Library/LaunchAgents/com.herdr.telegram.plist`.
+
+- Edit `~/.config/herdr-telegram/config.json` with your credentials.
+- Agent management:
+  ```bash
+  # Check logs
+  tail -f ~/.config/herdr-telegram/bot.log
+  tail -f ~/.config/herdr-telegram/bot.err.log
+
+  # Stop / Start
+  launchctl unload ~/Library/LaunchAgents/com.herdr.telegram.plist
+  launchctl load -w ~/Library/LaunchAgents/com.herdr.telegram.plist
+  ```
+
+---
+
+### 🪟 Windows (Native or WSL2)
+
+#### Option A: WSL2 (Recommended for dev environments)
+Inside your WSL2 Ubuntu/Debian terminal, follow the **Linux** instructions above. Ensure systemd is enabled in `/etc/wsl.conf`.
+
+#### Option B: Native Windows (PowerShell)
+Open PowerShell (as standard user):
+```powershell
+git clone <repo-url> $HOME\proyectos\herdr-telegram-bridge
+cd $HOME\proyectos\herdr-telegram-bridge
+powershell -ExecutionPolicy Bypass -File .\install.ps1
+```
+The script copies the files to `%APPDATA%\herdr-telegram` and registers a Windows Scheduled Task (`HerdrTelegramBridge`) using `pythonw.exe` (no console window).
+
+- Edit `%APPDATA%\herdr-telegram\config.json`.
+- Task management:
+  ```powershell
+  # Start task
+  Start-ScheduledTask -TaskName "HerdrTelegramBridge"
+
+  # Stop task
+  Stop-ScheduledTask -TaskName "HerdrTelegramBridge"
+
+  # Check status
+  Get-ScheduledTask -TaskName "HerdrTelegramBridge"
+  ```
+
+---
+
+## Configuration Reference
+
+`config.json` schema:
+
 ```json
 {
   "bot_token": "123456789:ABCdefGHIjklMNOpqrSTUvwxYZ",
   "allowed_chat_id": 809438653,
   "group_chat_id": -1004353505956,
-  "herdr_bin": "~/.local/bin/herdr",
+  "herdr_bin": "herdr",
   "projects_dir": "~/proyectos"
 }
 ```
@@ -79,23 +138,8 @@ Edit `~/.config/herdr-telegram/config.json`:
 | `bot_token` | HTTP API token obtained from `@BotFather`. |
 | `allowed_chat_id` | Your personal Telegram user ID (whitelist security). |
 | `group_chat_id` | *(Optional)* The Telegram Supergroup ID with Topics enabled. |
-| `herdr_bin` | Path to the `herdr` executable (`herdr` or `~/.local/bin/herdr`). |
-| `projects_dir` | Base directory where new projects are created (`~/proyectos`). |
-
-### 4. Enable and start the service
-```bash
-systemctl --user enable --now herdr-telegram.service
-```
-
-Verify service status:
-```bash
-systemctl --user status herdr-telegram.service
-```
-
-View live logs:
-```bash
-journalctl --user -u herdr-telegram.service -f
-```
+| `herdr_bin` | Path to the `herdr` executable (`herdr` or absolute path). |
+| `projects_dir` | Base directory where new projects are created. |
 
 ---
 
@@ -103,11 +147,11 @@ journalctl --user -u herdr-telegram.service -f
 
 To enable topic isolation:
 1. Create a new Telegram group and add your bot.
-2. In the group settings:
+2. In group settings:
    - Enable **Topics** (Modo Foro).
    - Promote your bot to **Administrator** with the **Manage Topics** permission.
-3. Send any message in the group. Retrieve the group's `chat_id` (negative integer starting with `-100...`) from the service logs (`journalctl -u herdr-telegram -n 20`).
-4. Set `"group_chat_id"` in `config.json` and restart the service (`systemctl --user restart herdr-telegram`).
+3. Send any message in the group. Retrieve the group's `chat_id` (negative integer starting with `-100...`) from the service logs.
+4. Set `"group_chat_id"` in `config.json` and restart the service.
 
 ---
 
@@ -131,8 +175,5 @@ To enable topic isolation:
 
 ## Uninstallation
 
-To cleanly stop and remove the service:
-```bash
-./uninstall.sh
-```
-This stops and disables the systemd service, removes the unit file, and optionally prompts to remove `~/.config/herdr-telegram`.
+- **Linux / macOS**: Run `./uninstall.sh`.
+- **Windows**: Run `powershell -ExecutionPolicy Bypass -File .\uninstall.ps1`.
