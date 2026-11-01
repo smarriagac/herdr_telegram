@@ -1,11 +1,12 @@
 <p align="center">
-  <img src="docs/assets/banner.svg" alt="Herdr Telegram Bridge Banner" width="100%">
+  <img src="docs/assets/banner.es.svg" alt="Herdr Telegram Bridge Banner" width="100%">
 </p>
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/Licencia-MIT-blue.svg" alt="Licencia: MIT"></a>
   <img src="https://img.shields.io/badge/Python-3.8+-brightgreen.svg" alt="Python 3.8+">
   <img src="https://img.shields.io/badge/Dependencias-0%20(Solo%20Stdlib)-success.svg" alt="Cero Dependencias">
+  <img src="https://img.shields.io/badge/Arquitectura-Limpia%20%2F%20Hexagonal-orange.svg" alt="Arquitectura Limpia">
   <img src="https://img.shields.io/badge/Plataforma-Linux%20%7C%20macOS%20%7C%20Windows-blueviolet.svg" alt="Multiplataforma">
 </p>
 

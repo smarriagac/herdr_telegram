@@ -6,6 +6,7 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT"></a>
   <img src="https://img.shields.io/badge/Python-3.8+-brightgreen.svg" alt="Python 3.8+">
   <img src="https://img.shields.io/badge/Dependencies-0%20(Stdlib%20Only)-success.svg" alt="Zero Dependencies">
+  <img src="https://img.shields.io/badge/Architecture-Clean%20%2F%20Hexagonal-orange.svg" alt="Clean Architecture">
   <img src="https://img.shields.io/badge/Platform-Linux%20%7C%20macOS%20%7C%20Windows-blueviolet.svg" alt="Cross-Platform">
 </p>
 
