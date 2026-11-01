@@ -1,0 +1,146 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 620" width="100%" height="100%">
+  <defs>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
+      <feDropShadow dx="0" dy="8" stdDeviation="16" flood-color="#000000" flood-opacity="0.4" />
+    </filter>
+    <linearGradient id="bubble-agent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e293b" />
+      <stop offset="100%" stop-color="#0f172a" />
+    </linearGradient>
+    <linearGradient id="btn-accent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0284c7" />
+      <stop offset="100%" stop-color="#0369a1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Frame Background -->
+  <rect width="960" height="620" rx="16" fill="#090d16" />
+
+  <!-- App Window Container -->
+  <g transform="translate(24, 20)" filter="url(#shadow)">
+    <rect width="912" height="580" rx="14" fill="#0f172a" stroke="#1e293b" stroke-width="2" />
+
+    <!-- Window Topbar -->
+    <rect width="912" height="48" rx="14" fill="#1e293b" />
+    <path d="M0 34 H912 V48 H0 Z" fill="#1e293b" />
+    <!-- Traffic lights -->
+    <circle cx="28" cy="24" r="6" fill="#ef4444" />
+    <circle cx="48" cy="24" r="6" fill="#f59e0b" />
+    <circle cx="68" cy="24" r="6" fill="#10b981" />
+    <text x="456" y="30" font-family="system-ui, sans-serif" font-size="14" font-weight="600" fill="#94a3b8" text-anchor="middle">Telegram · Herdr Mission Control Forum</text>
+
+    <!-- Sidebar: Topics List (Left) -->
+    <g transform="translate(0, 48)">
+      <rect width="280" height="532" fill="#0b1120" stroke="#1e293b" stroke-width="1" />
+      
+      <!-- Group Header -->
+      <rect x="16" y="16" width="248" height="54" rx="10" fill="#1e293b" />
+      <circle cx="44" cy="43" r="18" fill="#38bdf8" />
+      <text x="44" y="48" font-family="system-ui, sans-serif" font-size="15" font-weight="bold" fill="#ffffff" text-anchor="middle">H</text>
+      <text x="72" y="38" font-family="system-ui, sans-serif" font-size="14" font-weight="700" fill="#f8fafc">Agent Workspaces</text>
+      <text x="72" y="55" font-family="system-ui, sans-serif" font-size="11" font-weight="500" fill="#64748b">4 Active Topics</text>
+
+      <!-- Topic Item: General -->
+      <g transform="translate(16, 86)">
+        <rect width="248" height="52" rx="8" fill="transparent" />
+        <text x="14" y="32" font-family="system-ui, sans-serif" font-size="13" font-weight="600" fill="#94a3b8">💬 # General</text>
+      </g>
+
+      <!-- Topic Item: deportivo (ACTIVE) -->
+      <g transform="translate(16, 142)">
+        <rect width="248" height="60" rx="10" fill="#1e293b" stroke="#38bdf8" stroke-width="1.5" />
+        <text x="14" y="28" font-family="system-ui, sans-serif" font-size="14" font-weight="700" fill="#38bdf8">📁 # deportivo</text>
+        <circle cx="20" cy="45" r="4" fill="#f59e0b" />
+        <text x="30" y="49" font-family="system-ui, sans-serif" font-size="11" font-weight="500" fill="#fbbf24">Waiting approval</text>
+        <rect x="195" y="20" width="40" height="20" rx="10" fill="#0284c7" />
+        <text x="215" y="34" font-family="system-ui, sans-serif" font-size="11" font-weight="bold" fill="#ffffff" text-anchor="middle">NEW</text>
+      </g>
+
+      <!-- Topic Item: prueba -->
+      <g transform="translate(16, 206)">
+        <rect width="248" height="52" rx="8" fill="transparent" />
+        <text x="14" y="28" font-family="system-ui, sans-serif" font-size="13" font-weight="600" fill="#94a3b8">📁 # prueba</text>
+        <circle cx="20" cy="42" r="4" fill="#10b981" />
+        <text x="30" y="46" font-family="system-ui, sans-serif" font-size="11" font-weight="500" fill="#64748b">Idle · Session stored</text>
+      </g>
+
+      <!-- Topic Item: proyectos -->
+      <g transform="translate(16, 262)">
+        <rect width="248" height="52" rx="8" fill="transparent" />
+        <text x="14" y="28" font-family="system-ui, sans-serif" font-size="13" font-weight="600" fill="#94a3b8">📁 # proyectos</text>
+        <circle cx="20" cy="42" r="4" fill="#10b981" />
+        <text x="30" y="46" font-family="system-ui, sans-serif" font-size="11" font-weight="500" fill="#64748b">Done · Revision 1</text>
+      </g>
+    </g>
+
+    <!-- Main Chat Area (Right) -->
+    <g transform="translate(280, 48)">
+      <!-- Topic Header -->
+      <rect width="632" height="54" fill="#0f172a" stroke="#1e293b" stroke-width="1" />
+      <text x="24" y="34" font-family="system-ui, sans-serif" font-size="16" font-weight="700" fill="#f8fafc">📁 deportivo</text>
+      <text x="125" y="34" font-family="system-ui, sans-serif" font-size="13" font-weight="500" fill="#64748b">· agy [Antigravity] · Session: 9f7707b4...</text>
+
+      <!-- Message Bubble: User prompt -->
+      <g transform="translate(220, 74)">
+        <rect width="388" height="44" rx="14" fill="#0284c7" />
+        <text x="18" y="27" font-family="system-ui, sans-serif" font-size="13" font-weight="500" fill="#ffffff">create user authentication middleware with JWT</text>
+        <text x="365" y="38" font-family="system-ui, sans-serif" font-size="9" fill="#bae6fd" text-anchor="end">20:24</text>
+      </g>
+
+      <!-- Message Bubble: Bot Alert & Blocked Prompt -->
+      <g transform="translate(24, 132)">
+        <rect width="520" height="236" rx="14" fill="url(#bubble-agent)" stroke="#334155" stroke-width="1" />
+
+        <!-- Header -->
+        <text x="18" y="28" font-family="system-ui, sans-serif" font-size="13" font-weight="bold" fill="#38bdf8">🔔 Actualización de Estado: deportivo</text>
+        <text x="18" y="50" font-family="system-ui, sans-serif" font-size="12" fill="#94a3b8">⏳ Laburando ➔ <tspan fill="#f59e0b" font-weight="bold">⚠️ Esperando confirmación</tspan></text>
+
+        <!-- Terminal preview box inside bubble -->
+        <rect x="18" y="65" width="484" height="68" rx="8" fill="#020617" stroke="#1e293b" stroke-width="1" />
+        <text x="30" y="88" font-family="monospace" font-size="11" fill="#cbd5e1">? Allow executing command:</text>
+        <text x="30" y="106" font-family="monospace" font-size="11" fill="#38bdf8">$ pnpm add jsonwebtoken @types/jsonwebtoken</text>
+        <text x="30" y="122" font-family="monospace" font-size="10" fill="#64748b">  [Y/n] · tab amend · esc to cancel</text>
+
+        <!-- Tactile Inline Buttons (Interactive) -->
+        <g transform="translate(18, 146)">
+          <!-- Button: Accept (Enter) -->
+          <rect x="0" y="0" width="154" height="38" rx="8" fill="#1e293b" stroke="#10b981" stroke-width="1.5" />
+          <text x="77" y="24" font-family="system-ui, sans-serif" font-size="12" font-weight="700" fill="#10b981" text-anchor="middle">✅ Aceptar (Enter)</text>
+
+          <!-- Button: Yes -->
+          <rect x="165" y="0" width="154" height="38" rx="8" fill="#1e293b" stroke="#38bdf8" stroke-width="1.5" />
+          <text x="242" y="24" font-family="system-ui, sans-serif" font-size="12" font-weight="700" fill="#38bdf8" text-anchor="middle">👍 Responder Sí</text>
+
+          <!-- Button: Cancel -->
+          <rect x="330" y="0" width="154" height="38" rx="8" fill="#1e293b" stroke="#ef4444" stroke-width="1.5" />
+          <text x="407" y="24" font-family="system-ui, sans-serif" font-size="12" font-weight="700" fill="#ef4444" text-anchor="middle">❌ Cancelar</text>
+
+          <!-- Button: View Terminal -->
+          <rect x="0" y="44" width="238" height="34" rx="8" fill="#0f172a" stroke="#334155" stroke-width="1" />
+          <text x="119" y="66" font-family="system-ui, sans-serif" font-size="12" font-weight="600" fill="#cbd5e1" text-anchor="middle">📄 Ver Terminal Reciente</text>
+
+          <!-- Button: Panel -->
+          <rect x="246" y="44" width="238" height="34" rx="8" fill="#0f172a" stroke="#334155" stroke-width="1" />
+          <text x="365" y="66" font-family="system-ui, sans-serif" font-size="12" font-weight="600" fill="#cbd5e1" text-anchor="middle">🔄 Actualizar Panel</text>
+        </g>
+      </g>
+
+      <!-- Bottom Persistent Navigation Bar (Mobile / Desktop) -->
+      <g transform="translate(16, 435)">
+        <rect width="600" height="82" rx="12" fill="#0b1120" stroke="#1e293b" stroke-width="1" />
+        
+        <rect x="12" y="10" width="138" height="62" rx="8" fill="#1e293b" stroke="#38bdf8" stroke-width="1" />
+        <text x="81" y="46" font-family="system-ui, sans-serif" font-size="13" font-weight="bold" fill="#f8fafc" text-anchor="middle">🤖 Mis Agentes</text>
+
+        <rect x="158" y="10" width="138" height="62" rx="8" fill="#1e293b" stroke="#334155" stroke-width="1" />
+        <text x="227" y="46" font-family="system-ui, sans-serif" font-size="13" font-weight="bold" fill="#f8fafc" text-anchor="middle">➕ Nuevo Agente</text>
+
+        <rect x="304" y="10" width="138" height="62" rx="8" fill="#1e293b" stroke="#334155" stroke-width="1" />
+        <text x="373" y="46" font-family="system-ui, sans-serif" font-size="13" font-weight="bold" fill="#f8fafc" text-anchor="middle">📄 Ver Salida</text>
+
+        <rect x="450" y="10" width="138" height="62" rx="8" fill="#1e293b" stroke="#334155" stroke-width="1" />
+        <text x="519" y="46" font-family="system-ui, sans-serif" font-size="13" font-weight="bold" fill="#f8fafc" text-anchor="middle">❓ Ayuda</text>
+      </g>
+    </g>
+  </g>
+</svg>

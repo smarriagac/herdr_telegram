@@ -1,11 +1,44 @@
-# Herdr Telegram Bridge
+<p align="center">
+  <img src="docs/assets/banner.svg" alt="Herdr Telegram Bridge Banner" width="100%">
+</p>
 
-A lightweight, zero-dependency bridge between **Telegram** and [Herdr](https://herdr.dev) (the agent-native workspace manager). It allows you to monitor, control, and interact with multiple AI coding agents running on your remote machine directly from your phone.
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT"></a>
+  <img src="https://img.shields.io/badge/Python-3.8+-brightgreen.svg" alt="Python 3.8+">
+  <img src="https://img.shields.io/badge/Dependencies-0%20(Stdlib%20Only)-success.svg" alt="Zero Dependencies">
+  <img src="https://img.shields.io/badge/Platform-Linux%20%7C%20macOS%20%7C%20Windows-blueviolet.svg" alt="Cross-Platform">
+</p>
+
+A lightweight, zero-dependency bridge between **Telegram Forum Supergroups** and [Herdr](https://herdr.dev) (the agent-native workspace manager). Monitor, orchestrate, and approve multiple AI coding agents running on your remote machine directly from your phone.
+
+---
+
+## Visual Interface
+
+<p align="center">
+  <img src="docs/assets/telegram-ui-preview.svg" alt="Telegram Forum Interface Preview" width="100%">
+</p>
+
+---
+
+## Key Features
+
+- **📱 Dedicated Forum Topics**: Automatically creates and binds a Telegram topic for each workspace. Multiple coding agents can run concurrently without interleaving chats.
+- **⚡ Natural Prompting**: Write natural language inside any project topic to prompt that agent directly—no slash commands needed.
+- **🔘 Tactile Approval Controls**: Receive real-time notifications when an agent requires confirmation, with inline buttons for `[Enter]`, `[Yes]`, and `[Cancel]`.
+- **💾 Zero-Database Session Persistence**: Captures workspace `session_id` and restores historical conversation context via local agent transcripts without SQLite, Redis, or PostgreSQL.
+- **🛡️ Strict Whitelist Security**: Enforces personal Telegram user whitelist authentication to protect your host terminal.
+- **📦 Zero External Dependencies**: Powered entirely by the Python standard library (`urllib`, `subprocess`, `json`, `threading`). No `pip install` or virtual environments required.
+- **🌐 Cross-Platform Daemon**: Ready-to-use background service scripts for **Linux** (`systemd`), **macOS** (`launchd`), and **Windows** (Task Scheduler).
+
+---
+
+## Architecture at a Glance
 
 ```mermaid
 flowchart LR
-    subgraph Telegram["Telegram"]
-        Group["Forum Supergroup\n(Topics enabled)"]
+    subgraph Telegram["Telegram Client (Mobile / Desktop)"]
+        Supergroup["Forum Supergroup"]
         TopicA["#📁 deportivo\n(Topic)"]
         TopicB["#📁 prueba\n(Topic)"]
         Direct["Private Chat\n(Admin)"]
@@ -29,99 +62,55 @@ flowchart LR
     Socket <--> AgentB
 ```
 
-## Features
-
-- **Cross-Platform**: Native daemon support for **Linux** (`systemd --user`), **macOS** (`launchd`), and **Windows** (Task Scheduler with `pythonw.exe` or WSL2).
-- **Zero External Dependencies**: Built entirely using Python's standard library (`urllib`, `subprocess`, `json`, `threading`). No virtual environment or `pip install` required.
-- **Isolated Forum Topics**: Automatically manages dedicated Telegram topics for each Herdr workspace. Decisions, notifications, and prompts stay isolated without polluting each other's context.
-- **Direct Prompting**: Inside any project topic, typing plain natural language immediately submits a prompt to that agent without requiring `/prompt` commands.
-- **Interactive Inline Buttons**: Approve permission requests (`Enter`, `Yes`, `Cancel`), view live terminal outputs, or refresh the status panel with tactile touch controls.
-- **Background Persistence**: Runs headlessly in the background, surviving sleep, logout, and terminal disconnects.
+> [!TIP]
+> Read the complete deep-dive in [Architecture & Session Persistence](docs/ARCHITECTURE.md).
 
 ---
 
-## Prerequisites
+## Quickstart
 
-1. **Python 3.8+** (`python3` on Linux/macOS, `python.exe` / `pythonw.exe` on Windows).
-2. **Herdr** installed and accessible in `PATH`.
-3. A **Telegram Bot Token** from [@BotFather](https://t.me/BotFather).
+### Prerequisites
+1. **Python 3.8+**
+2. **Herdr** installed and available in `PATH`
+3. A **Telegram Bot Token** from [@BotFather](https://t.me/BotFather) (see [Telegram Setup Guide](docs/SETUP_TELEGRAM.md))
 
 ---
 
-## Installation by Operating System
+### Installation by OS
 
-### 🐧 Linux (systemd)
-
+#### 🐧 Linux (`systemd --user`)
 ```bash
-git clone <repo-url> ~/proyectos/herdr-telegram-bridge
+git clone https://github.com/smarriagac/herdr-telegram-bridge.git ~/proyectos/herdr-telegram-bridge
 cd ~/proyectos/herdr-telegram-bridge
 ./install.sh
 ```
+- Edit `~/.config/herdr-telegram/config.json`.
+- Daemon logs: `journalctl --user -u herdr-telegram.service -f`
 
-- Edit `~/.config/herdr-telegram/config.json` with your credentials.
-- Service management:
-  ```bash
-  systemctl --user status herdr-telegram.service
-  journalctl --user -u herdr-telegram.service -f
-  ```
-
----
-
-### 🍏 macOS (launchd)
-
+#### 🍏 macOS (`launchd`)
 ```bash
-git clone <repo-url> ~/proyectos/herdr-telegram-bridge
+git clone https://github.com/smarriagac/herdr-telegram-bridge.git ~/proyectos/herdr-telegram-bridge
 cd ~/proyectos/herdr-telegram-bridge
 ./install.sh
 ```
-The installer automatically detects macOS and installs a `launchd` user agent at `~/Library/LaunchAgents/com.herdr.telegram.plist`.
+- The installer creates `~/Library/LaunchAgents/com.herdr.telegram.plist`.
+- Daemon logs: `tail -f ~/.config/herdr-telegram/bot.log`
 
-- Edit `~/.config/herdr-telegram/config.json` with your credentials.
-- Agent management:
-  ```bash
-  # Check logs
-  tail -f ~/.config/herdr-telegram/bot.log
-  tail -f ~/.config/herdr-telegram/bot.err.log
-
-  # Stop / Start
-  launchctl unload ~/Library/LaunchAgents/com.herdr.telegram.plist
-  launchctl load -w ~/Library/LaunchAgents/com.herdr.telegram.plist
-  ```
-
----
-
-### 🪟 Windows (Native or WSL2)
-
-#### Option A: WSL2 (Recommended for dev environments)
-Inside your WSL2 Ubuntu/Debian terminal, follow the **Linux** instructions above. Ensure systemd is enabled in `/etc/wsl.conf`.
-
-#### Option B: Native Windows (PowerShell)
-Open PowerShell (as standard user):
+#### 🪟 Windows (PowerShell & Task Scheduler)
+Open standard PowerShell:
 ```powershell
-git clone <repo-url> $HOME\proyectos\herdr-telegram-bridge
+git clone https://github.com/smarriagac/herdr-telegram-bridge.git $HOME\proyectos\herdr-telegram-bridge
 cd $HOME\proyectos\herdr-telegram-bridge
 powershell -ExecutionPolicy Bypass -File .\install.ps1
 ```
-The script copies the files to `%APPDATA%\herdr-telegram` and registers a Windows Scheduled Task (`HerdrTelegramBridge`) using `pythonw.exe` (no console window).
-
-- Edit `%APPDATA%\herdr-telegram\config.json`.
-- Task management:
-  ```powershell
-  # Start task
-  Start-ScheduledTask -TaskName "HerdrTelegramBridge"
-
-  # Stop task
-  Stop-ScheduledTask -TaskName "HerdrTelegramBridge"
-
-  # Check status
-  Get-ScheduledTask -TaskName "HerdrTelegramBridge"
-  ```
+- Registers a background Windows Task using `pythonw.exe` (no terminal window).
+- Task management: `Get-ScheduledTask -TaskName "HerdrTelegramBridge"`
 
 ---
 
 ## Configuration Reference
 
-`config.json` schema:
+Edit `config.json` (stored at `~/.config/herdr-telegram/config.json` or `%APPDATA%\herdr-telegram\config.json`):
 
 ```json
 {
@@ -133,59 +122,50 @@ The script copies the files to `%APPDATA%\herdr-telegram` and registers a Window
 }
 ```
 
-| Field | Description |
+| Parameter | Type | Required | Description |
+|---|---|:---:|---|
+| `bot_token` | `string` | **Yes** | HTTP Bot API token from [@BotFather](https://t.me/BotFather). |
+| `allowed_chat_id` | `integer` | **Yes** | Whitelisted personal Telegram user ID. |
+| `group_chat_id` | `integer` | No | Telegram Forum Supergroup ID (starts with `-100...`). |
+| `herdr_bin` | `string` | No | Path to Herdr executable (default: `"herdr"`). |
+| `projects_dir` | `string` | No | Base directory for new workspaces (default: `"~/proyectos"`). |
+
+---
+
+## Commands & Touch Controls
+
+### In Workspace Topics
+| Action | Description |
 |---|---|
-| `bot_token` | HTTP API token obtained from `@BotFather`. |
-| `allowed_chat_id` | Your personal Telegram user ID (whitelist security). |
-| `group_chat_id` | *(Optional)* The Telegram Supergroup ID with Topics enabled. |
-| `herdr_bin` | Path to the `herdr` executable (`herdr` or absolute path). |
-| `projects_dir` | Base directory where new projects are created. |
+| `Plain message text` | Immediately dispatches instruction/prompt to the agent. |
+| `[Enter]` *(Button / `/enter`)* | Sends `Enter` (useful for approving tool executions or interactive menus). |
+| `[Yes]` *(Button / `/yes`)* | Sends `y` + `Enter`. |
+| `[Cancel]` *(Button / `/esc`)* | Sends `Escape` to cancel pending execution dialogs. |
+| `/read` | Fetches recent terminal output from the agent session. |
+| `/resume` | Resumes a stopped agent session, retaining full context. |
+| `/close` | Stops the agent workspace and archives the Telegram topic. |
+
+### In General Topic or Direct Message
+| Command | Description |
+|---|---|
+| `/status` or `/agents` | Interactive dashboard displaying all running agents, engines, and status. |
+| `/new <name> [engine]` | Creates project directory, launches Herdr workspace, and creates topic. |
+| `/resume <name>` | Restores a previous agent session via `--conversation <session_id>`. |
+| `/read <name>` | Displays live terminal output for a specific workspace. |
+| `/help` | Shows command reference and active shortcuts. |
 
 ---
 
-## Telegram Setup (Forum Supergroup)
+## Documentation
 
-To enable topic isolation:
-1. Create a new Telegram group and add your bot.
-2. In group settings:
-   - Enable **Topics** (Modo Foro).
-   - Promote your bot to **Administrator** with the **Manage Topics** permission.
-3. Send any message in the group. Retrieve the group's `chat_id` (negative integer starting with `-100...`) from the service logs.
-4. Set `"group_chat_id"` in `config.json` and restart the service.
-
----
-
-## Commands & Controls
-
-### In Dedicated Project Topics
-- **Plain text message**: Directly submits an instruction/prompt to the agent.
-- `/read`: Inspects recent terminal output for this agent.
-- `/enter`: Sends `Enter` (useful when approving prompts).
-- `/yes`: Sends `y` + `Enter`.
-- `/esc`: Sends `Escape` to cancel an open dialog.
-- `/resume`: Resumes this agent's session if it was stopped.
-- `/close`: Closes the Herdr workspace and archives the topic.
-
-### In General Topic or Private Chat
-- `/status` or `/agents`: Displays interactive dashboard of all workspaces with active session IDs.
-- `/new <name> [engine]`: Creates a project folder, spawns a Herdr workspace, launches the agent (default: `agy`), and creates a Telegram topic.
-- `/resume <name>`: Resumes an existing project agent preserving previous conversation context.
-- `/read <name>`: Reads the terminal of a specific workspace.
-- `/help`: Displays available commands.
-
----
-
-## Session Persistence Architecture
-
-The bridge does not require an external database to persist conversations. It leverages the agent's native local storage:
-1. When an agent runs, Herdr tracks its unique session UUID (`session_id`).
-2. The bridge automatically synchronizes `session_id` into `topics.json` for each project.
-3. Transcripts remain stored in JSONL format on local disk by the agent runtime (`~/.gemini/antigravity-cli/brain/<session_id>/transcript.jsonl`).
-4. Running `/resume <name>` relaunches the agent passing `--conversation <session_id>`, fully restoring the chat history and context without any database overhead.
+- 📖 [Telegram Bot & Supergroup Setup Guide](docs/SETUP_TELEGRAM.md): Step-by-step instructions for BotFather, Topics configuration, and permission setup.
+- 🏛️ [Architecture & Session Persistence](docs/ARCHITECTURE.md): Deep-dive into socket IPC, real-time watcher thread, and zero-DB transcript recovery.
+- 🤝 [Contributing Guidelines](docs/CONTRIBUTING.md): Code standards, conventional commits, and local testing.
+- 📄 [MIT License](LICENSE): Permissive open-source license.
 
 ---
 
 ## Uninstallation
 
-- **Linux / macOS**: Run `./uninstall.sh`.
-- **Windows**: Run `powershell -ExecutionPolicy Bypass -File .\uninstall.ps1`.
+- **Linux / macOS**: Run `./uninstall.sh`
+- **Windows**: Run `powershell -ExecutionPolicy Bypass -File .\uninstall.ps1`

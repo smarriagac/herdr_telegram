@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 360" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="50%" stop-color="#1e1b4b" />
+      <stop offset="100%" stop-color="#090d16" />
+    </linearGradient>
+    <linearGradient id="tg-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#2563eb" />
+    </linearGradient>
+    <linearGradient id="herdr-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f59e0b" />
+      <stop offset="100%" stop-color="#ef4444" />
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="30" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="360" fill="url(#bg)" />
+
+  <!-- Ambient Glows -->
+  <circle cx="200" cy="80" r="140" fill="#2563eb" opacity="0.25" filter="url(#glow)" />
+  <circle cx="1000" cy="280" r="160" fill="#f59e0b" opacity="0.18" filter="url(#glow)" />
+
+  <!-- Grid Pattern Overlay -->
+  <g stroke="#334155" stroke-width="1" opacity="0.15">
+    <path d="M0 60 H1200 M0 120 H1200 M0 180 H1200 M0 240 H1200 M0 300 H1200" />
+    <path d="M120 0 V360 M240 0 V360 M360 0 V360 M480 0 V360 M600 0 V360 M720 0 V360 M840 0 V360 M960 0 V360 M1080 0 V360" />
+  </g>
+
+  <!-- Icons connection: Telegram to Herdr -->
+  <g transform="translate(100, 100)">
+    <!-- Telegram Icon Card -->
+    <rect x="0" y="20" width="120" height="120" rx="28" fill="#1e293b" stroke="#38bdf8" stroke-width="2" />
+    <circle cx="60" cy="80" r="38" fill="url(#tg-grad)" />
+    <!-- Telegram plane glyph -->
+    <path d="M44 80 L74 65 L67 92 L61 83 L53 88 Z" fill="#ffffff" />
+    <path d="M61 83 L71 71 L56 80 Z" fill="#cbd5e1" opacity="0.8" />
+
+    <!-- Pulsing Signal -->
+    <path d="M140 80 H260" stroke="#38bdf8" stroke-dasharray="6,6" stroke-width="3" opacity="0.8" />
+    <circle cx="200" cy="80" r="6" fill="#38bdf8" />
+
+    <!-- Herdr Terminal Icon Card -->
+    <rect x="280" y="20" width="120" height="120" rx="28" fill="#1e293b" stroke="#f59e0b" stroke-width="2" />
+    <!-- Terminal header dots -->
+    <circle cx="305" cy="42" r="5" fill="#ef4444" />
+    <circle cx="320" cy="42" r="5" fill="#f59e0b" />
+    <circle cx="335" cy="42" r="5" fill="#10b981" />
+    <!-- Terminal glyph -->
+    <text x="305" y="95" font-family="monospace" font-size="28" font-weight="bold" fill="#f59e0b">&gt;_</text>
+    <rect x="345" y="78" width="18" height="20" fill="#10b981" opacity="0.8" />
+  </g>
+
+  <!-- Typography -->
+  <g transform="translate(560, 110)">
+    <!-- Badge -->
+    <rect x="0" y="0" width="220" height="28" rx="14" fill="#38bdf8" fill-opacity="0.15" stroke="#38bdf8" stroke-opacity="0.4" stroke-width="1" />
+    <text x="14" y="19" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="700" fill="#38bdf8" letter-spacing="1.5">AGENT MISSION CONTROL</text>
+
+    <!-- Main Title -->
+    <text x="0" y="75" font-family="system-ui, -apple-system, sans-serif" font-size="44" font-weight="800" fill="#f8fafc">
+      Herdr Telegram Bridge
+    </text>
+
+    <!-- Subtitle -->
+    <text x="0" y="115" font-family="system-ui, -apple-system, sans-serif" font-size="18" font-weight="400" fill="#94a3b8">
+      Multi-agent remote control via Telegram Forum Topics &amp; Inline Controls
+    </text>
+
+    <!-- Highlights pills -->
+    <g transform="translate(0, 150)">
+      <rect x="0" y="0" width="125" height="32" rx="8" fill="#1e293b" stroke="#475569" stroke-width="1" />
+      <text x="14" y="21" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="600" fill="#cbd5e1">Zero Dependencies</text>
+
+      <rect x="135" y="0" width="115" height="32" rx="8" fill="#1e293b" stroke="#475569" stroke-width="1" />
+      <text x="149" y="21" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="600" fill="#cbd5e1">Forum Topics</text>
+
+      <rect x="260" y="0" width="130" height="32" rx="8" fill="#1e293b" stroke="#475569" stroke-width="1" />
+      <text x="274" y="21" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="600" fill="#cbd5e1">Linux · Mac · Win</text>
+
+      <rect x="400" y="0" width="150" height="32" rx="8" fill="#1e293b" stroke="#475569" stroke-width="1" />
+      <text x="414" y="21" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="600" fill="#cbd5e1">Session Persistence</text>
+    </g>
+  </g>
+</svg>
