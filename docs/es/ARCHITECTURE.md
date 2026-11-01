@@ -40,6 +40,43 @@ sequenceDiagram
 
 ---
 
+## Arquitectura Limpia (Hexagonal / Puertos y Adaptadores)
+
+La base de código está estructurada según los principios de la **Arquitectura Limpia** para aislar las reglas de negocio de los frameworks, APIs externas y herramientas de terminal:
+
+```
+src/bridge/
+├── domain/                  # Entidades del dominio y reglas de negocio puras
+│   ├── models.py            # AgentInfo, TopicBinding, ProcessStatus
+│   └── ports.py             # HerdrDriverPort, StateRepositoryPort, TelegramPort
+├── adapters/                # Implementaciones de infraestructura de los puertos
+│   ├── drivers/             # Adaptadores de ejecución de agentes
+│   │   ├── classic_driver.py   # Herdr Clásico (CLI herdr / socket)
+│   │   ├── app_driver.py       # Herdr Escritorio (herdr-app do / herdr-core hc)
+│   │   └── composite_driver.py # Controlador dual unificado con autodetección
+│   ├── persistence/         # Adaptadores de persistencia
+│   │   └── json_topic_repository.py  # Almacenamiento atómico de topics.json
+│   └── telegram/            # Adaptadores de comunicación con Telegram
+│       └── telegram_client.py        # Cliente HTTP de Telegram con biblioteca estándar
+├── application/             # Casos de uso y orquestación de la aplicación
+│   ├── agent_service.py     # Operaciones del ciclo de vida de agentes y espacios
+│   ├── state_watcher.py     # Hilo en segundo plano que monitorea estados
+│   └── bot_controller.py    # Despachador de mensajes y comandos de Telegram
+├── config.py                # Carga y validación de configuración
+└── main.py                  # Raíz de composición e inyección de dependencias
+```
+
+### Arquitectura de Controlador Dual: Terminal y Escritorio Unificados
+
+El puente soporta ambos ecosistemas de Herdr de forma transparente:
+1. **`ClassicHerdrDriver`**: Se comunica con el multiplexor tradicional `herdr` (`herdr server`, `~/.config/herdr/herdr.sock`, `herdr workspace`, `herdr agent`).
+2. **`HerdrAppDriver`**: Se comunica con la aplicación **Herdr Desktop** (`herdr-app do space.new`, `herdr-app ls`) y su motor de ejecución nativo **herdr-core** (`hc send`, `hc read`, `hc wait`, `hc keys`).
+3. **`CompositeHerdrDriver` (`"driver": "auto"`)**:
+   - Detecta agentes ejecutándose simultáneamente tanto en espacios de la Terminal como en el Escritorio.
+   - Enrutamiento inteligente: analiza el formato de los identificadores (`w1:t1:p1` frente a `t1` / `sp...`) y los nombres de proyectos para despachar las órdenes y teclas al controlador correcto sin intervención del usuario.
+
+---
+
 ## Componentes Principales
 
 ### 1. Sondeo de Telegram y Despachador con Lista Blanca

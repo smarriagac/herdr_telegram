@@ -23,8 +23,8 @@ fi
 echo "[+] Setting up config directory in ${CONFIG_DIR}..."
 mkdir -p "${CONFIG_DIR}"
 
-echo "[+] Installing bot script..."
-cp -f "${SCRIPT_DIR}/src/bot.py" "${CONFIG_DIR}/bot.py"
+echo "[+] Installing bot package and scripts..."
+cp -rf "${SCRIPT_DIR}/src/"* "${CONFIG_DIR}/"
 chmod +x "${CONFIG_DIR}/bot.py"
 
 CONFIG_IS_NEW=0

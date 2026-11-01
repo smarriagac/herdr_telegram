@@ -27,6 +27,8 @@ A lightweight, zero-dependency bridge between **Telegram Forum Supergroups** and
 
 ## Key Features
 
+- **🖥️ Dual Terminal & Desktop Support**: Seamlessly controls agents running on **Herdr Classic** (terminal CLI) and **Herdr Desktop** (`herdr-app` / `herdr-core hc`) individually or simultaneously with automatic backend detection.
+- **🏗️ Clean Architecture**: Strict Hexagonal (Ports & Adapters) design separating pure domain models from CLI drivers and transport protocols.
 - **📱 Dedicated Forum Topics**: Automatically creates and binds a Telegram topic for each workspace. Multiple coding agents can run concurrently without interleaving chats.
 - **⚡ Natural Prompting**: Write natural language inside any project topic to prompt that agent directly—no slash commands needed.
 - **🔘 Tactile Approval Controls**: Receive real-time notifications when an agent requires confirmation, with inline buttons for `[Enter]`, `[Yes]`, and `[Cancel]`.
@@ -121,7 +123,10 @@ Edit `config.json` (stored at `~/.config/herdr-telegram/config.json` or `%APPDAT
   "bot_token": "123456789:ABCdefGHIjklMNOpqrSTUvwxYZ",
   "allowed_chat_id": 809438653,
   "group_chat_id": -1004353505956,
+  "driver": "auto",
   "herdr_bin": "herdr",
+  "herdr_app_bin": "herdr-app",
+  "hc_bin": "hc",
   "projects_dir": "~/proyectos"
 }
 ```
@@ -131,7 +136,10 @@ Edit `config.json` (stored at `~/.config/herdr-telegram/config.json` or `%APPDAT
 | `bot_token` | `string` | **Yes** | HTTP Bot API token from [@BotFather](https://t.me/BotFather). |
 | `allowed_chat_id` | `integer` | **Yes** | Whitelisted personal Telegram user ID. |
 | `group_chat_id` | `integer` | No | Telegram Forum Supergroup ID (starts with `-100...`). |
-| `herdr_bin` | `string` | No | Path to Herdr executable (default: `"herdr"`). |
+| `driver` | `string` | No | Execution backend: `"auto"` (detect both), `"classic"`, or `"app"` (default: `"auto"`). |
+| `herdr_bin` | `string` | No | Path to Herdr Classic executable (default: `"herdr"`). |
+| `herdr_app_bin` | `string` | No | Path to Herdr Desktop executable (default: `"herdr-app"`). |
+| `hc_bin` | `string` | No | Path to herdr-core executable (default: `"hc"`). |
 | `projects_dir` | `string` | No | Base directory for new workspaces (default: `"~/proyectos"`). |
 
 ---

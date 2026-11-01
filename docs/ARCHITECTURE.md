@@ -40,6 +40,43 @@ sequenceDiagram
 
 ---
 
+## Clean Architecture (Hexagonal / Ports & Adapters)
+
+The codebase is organized following **Clean Architecture** principles to separate core domain logic from external frameworks, APIs, and CLI drivers:
+
+```
+src/bridge/
+├── domain/                  # Enterprise business rules & models (no external deps)
+│   ├── models.py            # AgentInfo, TopicBinding, ProcessStatus
+│   └── ports.py             # HerdrDriverPort, StateRepositoryPort, TelegramPort
+├── adapters/                # Infrastructure implementations of domain ports
+│   ├── drivers/             # Backend Execution Adapters
+│   │   ├── classic_driver.py   # Herdr Classic (herdr CLI / socket)
+│   │   ├── app_driver.py       # Herdr Desktop (herdr-app do / herdr-core hc)
+│   │   └── composite_driver.py # Unified dual-driver with automatic backend detection
+│   ├── persistence/         # Storage Adapters
+│   │   └── json_topic_repository.py  # Atomic topics.json state storage
+│   └── telegram/            # Presentation / Transport Adapters
+│       └── telegram_client.py        # Python standard library Telegram API client
+├── application/             # Application use cases & orchestration
+│   ├── agent_service.py     # Agent and workspace lifecycle operations
+│   ├── state_watcher.py     # Background daemon thread monitoring agent states
+│   └── bot_controller.py    # Telegram update routing and command dispatching
+├── config.py                # Configuration loading and validation
+└── main.py                  # Composition Root & Dependency Injection
+```
+
+### Dual-Driver Architecture: Terminal & Desktop Unification
+
+The bridge supports both Herdr ecosystems seamlessly:
+1. **`ClassicHerdrDriver`**: Connects to the traditional `herdr` multiplexer (`herdr server`, `~/.config/herdr/herdr.sock`, `herdr workspace`, `herdr agent`).
+2. **`HerdrAppDriver`**: Connects to the modern **Herdr Desktop** app (`herdr-app do space.new`, `herdr-app ls`) and its native execution engine **herdr-core** (`hc send`, `hc read`, `hc wait`, `hc keys`).
+3. **`CompositeHerdrDriver` (`"driver": "auto"`)**:
+   - Discovers agents running across **both** Terminal workspaces and Desktop spaces concurrently.
+   - Smart routing: Inspects target IDs (`w1:t1:p1` vs `t1` / `sp...`) and workspace names to transparently route prompts and keys to the appropriate backend.
+
+---
+
 ## Core Components
 
 ### 1. Telegram Polling & Whitelist Dispatcher

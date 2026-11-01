@@ -39,9 +39,9 @@ if (-not (Test-Path $configDir)) {
 }
 
 $scriptDir = $PSScriptRoot
+Copy-Item -Path (Join-Path $scriptDir "src\*") -Destination $configDir -Recurse -Force
 $destScript = Join-Path $configDir "bot.py"
-Copy-Item -Path (Join-Path $scriptDir "src\bot.py") -Destination $destScript -Force
-Write-Host "[+] Installed bot daemon to: $destScript" -ForegroundColor Green
+Write-Host "[+] Installed bot package and daemon to: $destScript" -ForegroundColor Green
 
 # 4. Handle configuration
 $destConfig = Join-Path $configDir "config.json"

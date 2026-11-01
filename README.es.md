@@ -27,6 +27,8 @@ Un puente ligero y sin dependencias externas entre **Supergrupos de Telegram con
 
 ## Características Principales
 
+- **🖥️ Soporte Dual para Terminal y Escritorio**: Control transparente de agentes que se ejecutan en **Herdr Clásico** (CLI en terminal) y **Herdr Escritorio** (`herdr-app` / `herdr-core hc`) individualmente o en simultáneo con detección automática del backend.
+- **🏗️ Arquitectura Limpia**: Diseño estricto Hexagonal (Puertos y Adaptadores) que aísla los modelos y reglas de negocio del transporte de Telegram y las herramientas CLI.
 - **📱 Temas de Foro Dedicados**: Crea y vincula automáticamente un tema de Telegram por cada espacio de trabajo. Múltiples agentes pueden ejecutarse en paralelo sin mezclar sus conversaciones.
 - **⚡ Instrucciones Directas**: Escribe en lenguaje natural dentro de cualquier tema para enviar la instrucción al agente correspondiente, sin necesidad de comandos barra (`/prompt`).
 - **🔘 Botones Táctiles de Aprobación**: Recibe notificaciones en tiempo real cuando un agente requiera confirmación, con botones interactivos para `[Enter]`, `[Yes]` y `[Cancel]`.
@@ -121,7 +123,10 @@ Edita el archivo `config.json` (ubicado en `~/.config/herdr-telegram/config.json
   "bot_token": "123456789:ABCdefGHIjklMNOpqrSTUvwxYZ",
   "allowed_chat_id": 809438653,
   "group_chat_id": -1004353505956,
+  "driver": "auto",
   "herdr_bin": "herdr",
+  "herdr_app_bin": "herdr-app",
+  "hc_bin": "hc",
   "projects_dir": "~/proyectos"
 }
 ```
@@ -131,7 +136,10 @@ Edita el archivo `config.json` (ubicado en `~/.config/herdr-telegram/config.json
 | `bot_token` | `string` | **Sí** | Token HTTP API provisto por [@BotFather](https://t.me/BotFather). |
 | `allowed_chat_id` | `integer` | **Sí** | ID de usuario de Telegram autorizado (seguridad de lista blanca). |
 | `group_chat_id` | `integer` | No | ID del Supergrupo de Telegram con foros activados (inicia con `-100...`). |
-| `herdr_bin` | `string` | No | Ruta al ejecutable de Herdr (predeterminado: `"herdr"`). |
+| `driver` | `string` | No | Backend de ejecución: `"auto"` (detecta ambos), `"classic"`, o `"app"` (predeterminado: `"auto"`). |
+| `herdr_bin` | `string` | No | Ruta al ejecutable de Herdr Clásico (predeterminado: `"herdr"`). |
+| `herdr_app_bin` | `string` | No | Ruta al ejecutable de Herdr Escritorio (predeterminado: `"herdr-app"`). |
+| `hc_bin` | `string` | No | Ruta al ejecutable de herdr-core (predeterminado: `"hc"`). |
 | `projects_dir` | `string` | No | Directorio base para nuevos espacios de trabajo (predeterminado: `"~/proyectos"`). |
 
 ---

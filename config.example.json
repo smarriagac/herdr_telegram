@@ -2,6 +2,9 @@
   "bot_token": "YOUR_TELEGRAM_BOT_TOKEN",
   "allowed_chat_id": 123456789,
   "group_chat_id": -1001234567890,
+  "driver": "auto",
   "herdr_bin": "herdr",
+  "herdr_app_bin": "herdr-app",
+  "hc_bin": "hc",
   "projects_dir": "~/proyectos"
 }
