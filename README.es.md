@@ -70,7 +70,7 @@ flowchart LR
 ```
 
 > [!TIP]
-> Consulta los detalles técnicos en la guía de [Arquitectura y Persistencia de Sesiones](docs/es/ARCHITECTURE.md).
+> Consulta los detalles técnicos en la guía de [Arquitectura y Persistencia de Sesiones](docs/es/ARCHITECTURE.md) o explora el [diagrama interactivo de Archify](docs/architecture-detailed.html).
 
 ---
 

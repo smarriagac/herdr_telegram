@@ -70,7 +70,7 @@ flowchart LR
 ```
 
 > [!TIP]
-> Read the complete deep-dive in [Architecture & Session Persistence](docs/ARCHITECTURE.md).
+> Read the complete deep-dive in [Architecture & Session Persistence](docs/ARCHITECTURE.md) or explore the [interactive Archify diagram](docs/architecture-detailed.html).
 
 ---
 

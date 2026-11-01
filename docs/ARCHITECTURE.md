@@ -40,6 +40,17 @@ sequenceDiagram
 
 ---
 
+## Detailed System Architecture (Interactive Archify Map)
+
+<p align="center">
+  <img src="assets/architecture-detailed.svg" alt="Detailed System Architecture" width="100%">
+</p>
+
+> [!TIP]
+> Explore the standalone **interactive HTML diagram** featuring dark/light themes, zoom, pan, and animated trace at [architecture-detailed.html](architecture-detailed.html).
+
+---
+
 ## Clean Architecture (Hexagonal / Ports & Adapters)
 
 The codebase is organized following **Clean Architecture** principles to separate core domain logic from external frameworks, APIs, and CLI drivers:

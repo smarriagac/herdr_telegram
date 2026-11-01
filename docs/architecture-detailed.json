@@ -1,0 +1,268 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Herdr Telegram Bridge Architecture & Operation",
+    "subtitle": "Clean Architecture & Dual Backend (Desktop & Terminal) System Map",
+    "output": "docs/architecture-detailed.html",
+    "visual_preset": "blueprint",
+    "animation": "trace",
+    "quality_profile": "showcase"
+  },
+  "components": [
+    {
+      "id": "tg_user",
+      "type": "external",
+      "label": "Developer",
+      "sublabel": "Mobile & Desktop",
+      "pos": [40, 160],
+      "size": [130, 60]
+    },
+    {
+      "id": "tg_forum",
+      "type": "frontend",
+      "label": "Forum Topics",
+      "sublabel": "#📁 project threads",
+      "pos": [40, 310],
+      "size": [130, 60]
+    },
+    {
+      "id": "tg_api",
+      "type": "cloud",
+      "label": "Telegram Bot API",
+      "sublabel": "HTTPS Cloud Gateway",
+      "pos": [220, 235],
+      "size": [130, 64],
+      "tag": "Long Polling"
+    },
+    {
+      "id": "bot_controller",
+      "type": "security",
+      "label": "Bot Controller",
+      "sublabel": "Whitelist & Router",
+      "pos": [410, 160],
+      "size": [140, 64],
+      "tag": "Auth Guard"
+    },
+    {
+      "id": "state_watcher",
+      "type": "backend",
+      "label": "State Watcher",
+      "sublabel": "Background Thread",
+      "pos": [410, 310],
+      "size": [140, 64],
+      "tag": "2.5s Poller"
+    },
+    {
+      "id": "agent_service",
+      "type": "backend",
+      "label": "Agent Service",
+      "sublabel": "Use Case Orchestrator",
+      "pos": [610, 235],
+      "size": [140, 64],
+      "tag": "Hexagonal Core"
+    },
+    {
+      "id": "topic_repo",
+      "type": "database",
+      "label": "Topic Repository",
+      "sublabel": "topics.json Storage",
+      "pos": [610, 390],
+      "size": [140, 60],
+      "tag": "Atomic File"
+    },
+    {
+      "id": "composite_driver",
+      "type": "backend",
+      "label": "Composite Driver",
+      "sublabel": "Smart Dual-Router",
+      "pos": [810, 235],
+      "size": [145, 64],
+      "tag": "Auto-Detect"
+    },
+    {
+      "id": "classic_driver",
+      "type": "backend",
+      "label": "Classic Driver",
+      "sublabel": "herdr CLI Adapter",
+      "pos": [1010, 160],
+      "size": [140, 64]
+    },
+    {
+      "id": "app_driver",
+      "type": "backend",
+      "label": "Herdr App Driver",
+      "sublabel": "herdr-app & hc Adapter",
+      "pos": [1010, 310],
+      "size": [140, 64]
+    },
+    {
+      "id": "herdr_classic",
+      "type": "backend",
+      "label": "Herdr Server",
+      "sublabel": "v0.9 Multiplexer",
+      "pos": [1210, 160],
+      "size": [145, 64],
+      "tag": "herdr.sock"
+    },
+    {
+      "id": "herdr_desktop",
+      "type": "backend",
+      "label": "Herdr App & Core",
+      "sublabel": "GPUI Desktop + hc",
+      "pos": [1210, 310],
+      "size": [145, 64],
+      "tag": "Desktop PTYs"
+    },
+    {
+      "id": "agent_runtimes",
+      "type": "backend",
+      "label": "AI Coding Agents",
+      "sublabel": "agy / claude / codex",
+      "pos": [1410, 235],
+      "size": [140, 64],
+      "tag": "Agent Native"
+    },
+    {
+      "id": "transcripts",
+      "type": "database",
+      "label": "Local Transcripts",
+      "sublabel": "transcript.jsonl",
+      "pos": [1410, 390],
+      "size": [140, 60],
+      "tag": "Zero-DB Resumption"
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Telegram Cloud",
+      "wraps": ["tg_user", "tg_forum", "tg_api"],
+      "pad": 20
+    },
+    {
+      "kind": "region",
+      "label": "Host Machine: herdr-telegram-bridge (Clean Architecture)",
+      "wraps": [
+        "bot_controller",
+        "state_watcher",
+        "agent_service",
+        "topic_repo",
+        "composite_driver",
+        "classic_driver",
+        "app_driver"
+      ],
+      "pad": 20
+    },
+    {
+      "kind": "region",
+      "label": "Herdr Runtime Ecosystem",
+      "wraps": [
+        "herdr_classic",
+        "herdr_desktop",
+        "agent_runtimes",
+        "transcripts"
+      ],
+      "pad": 20
+    }
+  ],
+  "connections": [
+    { "from": "tg_user", "to": "tg_forum", "label": "prompt / action" },
+    { "from": "tg_forum", "to": "tg_api", "label": "HTTPS" },
+    {
+      "from": "tg_api",
+      "to": "bot_controller",
+      "label": "getUpdates",
+      "variant": "emphasis"
+    },
+    { "from": "bot_controller", "to": "agent_service", "label": "authorized" },
+    {
+      "from": "agent_service",
+      "to": "topic_repo",
+      "label": "sync topic / session"
+    },
+    {
+      "from": "agent_service",
+      "to": "composite_driver",
+      "label": "execute action",
+      "variant": "emphasis"
+    },
+    {
+      "from": "composite_driver",
+      "to": "classic_driver",
+      "label": "terminal target"
+    },
+    {
+      "from": "composite_driver",
+      "to": "app_driver",
+      "label": "desktop target"
+    },
+    {
+      "from": "classic_driver",
+      "to": "herdr_classic",
+      "label": "socket / CLI"
+    },
+    {
+      "from": "app_driver",
+      "to": "herdr_desktop",
+      "label": "herdr-app do / hc"
+    },
+    {
+      "from": "herdr_classic",
+      "to": "agent_runtimes",
+      "label": "spawn / stdin"
+    },
+    {
+      "from": "herdr_desktop",
+      "to": "agent_runtimes",
+      "label": "spawn / stdin"
+    },
+    {
+      "from": "agent_runtimes",
+      "to": "transcripts",
+      "label": "log turn",
+      "variant": "dashed"
+    },
+    {
+      "from": "state_watcher",
+      "to": "composite_driver",
+      "label": "poll status (2.5s)",
+      "variant": "dashed"
+    },
+    {
+      "from": "state_watcher",
+      "to": "tg_api",
+      "label": "push blocked alert",
+      "variant": "security"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Clean Architecture Core",
+      "items": [
+        "Hexagonal (Ports & Adapters) design with zero third-party pip dependencies",
+        "BotController authenticates incoming messages against whitelist before routing",
+        "Domain models and interfaces remain decoupled from CLI and transport protocols"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Dual-Engine Desktop & Terminal",
+      "items": [
+        "CompositeDriver automatically resolves whether an agent runs in Desktop or Terminal",
+        "Herdr Desktop drives the GPUI GUI window via 'herdr-app do' and 'herdr-core' ('hc')",
+        "Herdr Classic multiplexer connects through 'herdr.sock' and workspace commands"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Zero-Database Session Persistence",
+      "items": [
+        "Agent UUIDs ('session_id') are tracked from runtime process metadata",
+        "Reinvoking with '--conversation <session_id>' natively restores full chat history",
+        "Atomic 'topics.json' binds persistent Telegram Forum Topics to workspace state"
+      ]
+    }
+  ]
+}

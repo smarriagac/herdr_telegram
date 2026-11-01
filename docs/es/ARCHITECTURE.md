@@ -40,6 +40,17 @@ sequenceDiagram
 
 ---
 
+## Arquitectura Detallada del Sistema (Mapa Interactivo Archify)
+
+<p align="center">
+  <img src="../assets/architecture-detailed.svg" alt="Arquitectura Detallada del Sistema" width="100%">
+</p>
+
+> [!TIP]
+> Puedes explorar el **diagrama HTML interactivo** con selector de temas claro/oscuro, zoom, paneo y animación de traza en [architecture-detailed.html](../architecture-detailed.html).
+
+---
+
 ## Arquitectura Limpia (Hexagonal / Puertos y Adaptadores)
 
 La base de código está estructurada según los principios de la **Arquitectura Limpia** para aislar las reglas de negocio de los frameworks, APIs externas y herramientas de terminal:
