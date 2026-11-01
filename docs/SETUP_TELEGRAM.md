@@ -2,6 +2,10 @@
 
 Configure your Telegram bot and Forum Supergroup to enable isolated workspace topics, mobile prompt execution, and approval buttons.
 
+<p align="right">
+  <a href="es/SETUP_TELEGRAM.md">Leer en Español</a>
+</p>
+
 ---
 
 ## Quick Path

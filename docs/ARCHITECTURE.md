@@ -2,6 +2,10 @@
 
 An in-depth guide to how `herdr-telegram-bridge` bridges Telegram Forum Topics, Herdr Unix domain sockets, and autonomous AI coding agents with zero external database dependencies.
 
+<p align="right">
+  <a href="es/ARCHITECTURE.md">Leer en Español</a>
+</p>
+
 ---
 
 ## System Overview

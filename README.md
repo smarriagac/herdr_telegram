@@ -9,6 +9,10 @@
   <img src="https://img.shields.io/badge/Platform-Linux%20%7C%20macOS%20%7C%20Windows-blueviolet.svg" alt="Cross-Platform">
 </p>
 
+<p align="center">
+  <b>English</b> • <a href="README.es.md">Español</a>
+</p>
+
 A lightweight, zero-dependency bridge between **Telegram Forum Supergroups** and [Herdr](https://herdr.dev) (the agent-native workspace manager). Monitor, orchestrate, and approve multiple AI coding agents running on your remote machine directly from your phone.
 
 ---

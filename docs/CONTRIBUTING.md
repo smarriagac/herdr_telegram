@@ -2,6 +2,10 @@
 
 Thank you for your interest in contributing to **Herdr Telegram Bridge**! We welcome community contributions, bug reports, and enhancements.
 
+<p align="right">
+  <a href="es/CONTRIBUTING.md">Leer en Español</a>
+</p>
+
 ---
 
 ## Guiding Principles
