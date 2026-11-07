@@ -6,7 +6,7 @@
   <title>Herdr Agent Controller</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script type="module" crossorigin src="/assets/index-QPp3zs0G.js"></script>
+  <script type="module" crossorigin src="/assets/index-DiQSyWrZ.js"></script>
   <link rel="stylesheet" crossorigin href="/assets/index-CAzXwj2A.css">
 </head>
 <body class="bg-gray-950 text-gray-100 font-sans antialiased min-h-screen selection:bg-blue-600 selection:text-white">
@@ -17,7 +17,10 @@
         <span class="text-xl">🤖</span>
         <div>
           <h1 class="text-base font-bold tracking-tight text-white leading-none">Herdr Agent Bridge</h1>
-          <span class="text-xs text-gray-400 font-mono" id="connection-status">● Conectado</span>
+          <span class="text-xs text-amber-400 font-mono flex items-center space-x-1" id="connection-status">
+            <span class="inline-block w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+            <span>Conectando...</span>
+          </span>
         </div>
       </div>
       <div class="flex items-center space-x-2">

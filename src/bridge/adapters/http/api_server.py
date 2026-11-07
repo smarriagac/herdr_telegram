@@ -9,7 +9,7 @@ import re
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any, Dict, Optional
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, unquote, urlparse
 
 from bridge.application.agent_service import AgentBridgeService
 from bridge.application.terminal_formatter import (
@@ -31,8 +31,7 @@ class MiniAppHandler(BaseHTTPRequestHandler):
     static_dir: str
 
     def log_message(self, format: str, *args: Any):
-        # Quiet standard logging to avoid terminal clutter
-        pass
+        logger.info("%s - " + format, self.address_string(), *args)
 
     def _send_json(self, status_code: int, data: Any):
         body = json.dumps(data).encode("utf-8")
@@ -95,7 +94,7 @@ class MiniAppHandler(BaseHTTPRequestHandler):
         # 2. API: Agent formatted result
         m_result = re.match(r"^/api/agents/([^/]+)/result$", path)
         if m_result:
-            target = m_result.group(1)
+            target = unquote(m_result.group(1))
             msg, _ = self.server_service.read_agent_result(target, lines=120)
             ok, raw_out = self.server_service.driver.read_terminal(target, lines=120)
             extracted = extract_agent_result(raw_out) if ok and raw_out else ""
@@ -113,7 +112,7 @@ class MiniAppHandler(BaseHTTPRequestHandler):
         # 3. API: Agent terminal lines
         m_term = re.match(r"^/api/agents/([^/]+)/terminal$", path)
         if m_term:
-            target = m_term.group(1)
+            target = unquote(m_term.group(1))
             lines_param = query.get("lines", ["40"])[0]
             lines = int(lines_param) if lines_param.isdigit() else 40
             ok, out = self.server_service.driver.read_terminal(target, lines=lines)
@@ -147,7 +146,7 @@ class MiniAppHandler(BaseHTTPRequestHandler):
         # 1. API: Send prompt to agent
         m_prompt = re.match(r"^/api/agents/([^/]+)/prompt$", path)
         if m_prompt:
-            target = m_prompt.group(1)
+            target = unquote(m_prompt.group(1))
             prompt_text = payload.get("prompt", "").strip()
             if not prompt_text:
                 self._send_error_json(400, "Missing 'prompt' in payload")
@@ -159,7 +158,7 @@ class MiniAppHandler(BaseHTTPRequestHandler):
         # 2. API: Send quick keys (enter, yes, esc)
         m_keys = re.match(r"^/api/agents/([^/]+)/keys$", path)
         if m_keys:
-            target = m_keys.group(1)
+            target = unquote(m_keys.group(1))
             key_name = payload.get("key", "").strip()
             if not key_name:
                 self._send_error_json(400, "Missing 'key' in payload")

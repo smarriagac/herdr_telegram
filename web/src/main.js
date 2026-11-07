@@ -25,6 +25,7 @@ let activeTab = 'result';
 let pollInterval = null;
 
 // DOM Elements
+const connectionStatusEl = document.getElementById('connection-status');
 const agentChipsEl = document.getElementById('agent-chips');
 const agentCountEl = document.getElementById('agent-count');
 const agentTitleEl = document.getElementById('agent-title');
@@ -45,15 +46,30 @@ const tabContentResult = document.getElementById('tab-content-result');
 const tabContentTerminal = document.getElementById('tab-content-terminal');
 const tabContentPrompt = document.getElementById('tab-content-prompt');
 
+function setConnectionStatus(online, text = '') {
+  if (!connectionStatusEl) return;
+  if (online) {
+    connectionStatusEl.className = 'text-xs text-emerald-400 font-mono flex items-center space-x-1.5';
+    connectionStatusEl.innerHTML = '<span class="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span><span class="font-semibold tracking-wide">En línea</span>';
+  } else {
+    connectionStatusEl.className = 'text-xs text-rose-400 font-mono flex items-center space-x-1.5';
+    connectionStatusEl.innerHTML = `<span class="inline-block w-2 h-2 rounded-full bg-rose-500"></span><span class="font-semibold tracking-wide">${text || 'Desconectado'}</span>`;
+  }
+}
+
 async function fetchAgents() {
   try {
     const res = await fetch('/api/agents');
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`);
+    }
     const data = await res.json();
     if (data.ok && Array.isArray(data.agents)) {
+      setConnectionStatus(true);
       agents = data.agents;
       agentCountEl.textContent = agents.length;
       renderChips();
-      
+
       // Auto-select first or keep current
       if (!selectedAgent && agents.length > 0) {
         selectAgent(agents[0].id);
@@ -64,9 +80,15 @@ async function fetchAgents() {
           updateActiveAgentHeader();
         }
       }
+    } else {
+      setConnectionStatus(false, data.error || 'Error');
     }
   } catch (err) {
     console.error('Error fetching agents:', err);
+    setConnectionStatus(false, 'Sin conexión');
+    if (agents.length === 0) {
+      agentChipsEl.innerHTML = `<span class="text-xs text-rose-400">⚠️ Error conectando con el servidor (${err.message})</span>`;
+    }
   }
 }
 
@@ -138,7 +160,6 @@ function updateActiveAgentHeader() {
 
 async function fetchResult() {
   if (!selectedAgent) return;
-  resultViewEl.innerHTML = '<p class="text-gray-400 italic">Cargando resultado del agente...</p>';
 
   try {
     const res = await fetch(`/api/agents/${encodeURIComponent(selectedAgent.id)}/result`);
@@ -146,10 +167,10 @@ async function fetchResult() {
     if (data.ok) {
       resultViewEl.innerHTML = data.formatted_html || '<p class="text-gray-400 italic">Sin resultado disponible.</p>';
     } else {
-      resultViewEl.innerHTML = `<p class="text-rose-400">Error: ${data.error}</p>`;
+      resultViewEl.innerHTML = `<p class="text-rose-400">⚠️ Error: ${data.error || 'No disponible'}</p>`;
     }
   } catch (err) {
-    resultViewEl.innerHTML = `<p class="text-rose-400">Error de conexión: ${err.message}</p>`;
+    resultViewEl.innerHTML = `<p class="text-rose-400">❌ Error de conexión: ${err.message}</p>`;
   }
 }
 
@@ -163,10 +184,10 @@ async function fetchTerminal() {
       terminalViewEl.textContent = data.output || 'Terminal sin salida reciente.';
       terminalViewEl.scrollTop = terminalViewEl.scrollHeight;
     } else {
-      terminalViewEl.textContent = `Error: ${data.error}`;
+      terminalViewEl.textContent = `⚠️ No se pudo leer la terminal: ${data.error || 'agente inactivo'}`;
     }
   } catch (err) {
-    terminalViewEl.textContent = `Error de conexión: ${err.message}`;
+    terminalViewEl.textContent = `❌ Error de conexión: ${err.message}`;
   }
 }
 
@@ -198,13 +219,41 @@ function setTab(tab) {
 tabBtnResult.addEventListener('click', () => setTab('result'));
 tabBtnTerminal.addEventListener('click', () => setTab('terminal'));
 tabBtnPrompt.addEventListener('click', () => setTab('prompt'));
+
 document.getElementById('btn-reload-terminal')?.addEventListener('click', () => {
   haptic('light');
   fetchTerminal();
 });
+
 document.getElementById('btn-refresh')?.addEventListener('click', () => {
   haptic('medium');
   fetchAgents();
+  if (activeTab === 'result') fetchResult();
+  if (activeTab === 'terminal') fetchTerminal();
+});
+
+// Create New Agent
+document.getElementById('btn-new-agent')?.addEventListener('click', async () => {
+  haptic('medium');
+  const name = prompt('Ingresá el nombre del nuevo proyecto o agente:');
+  if (!name || !name.trim()) return;
+
+  try {
+    const res = await fetch('/api/agents/new', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: name.trim(), engine: 'agy' }),
+    });
+    const data = await res.json();
+    if (data.ok) {
+      alert(`✅ Agente "${name}" creado exitosamente.`);
+      fetchAgents();
+    } else {
+      alert(`❌ Error creando agente: ${data.error}`);
+    }
+  } catch (err) {
+    alert(`❌ Error de red: ${err.message}`);
+  }
 });
 
 // Quick Action Buttons
@@ -292,4 +341,15 @@ document.getElementById('btn-send-prompt').addEventListener('click', async () =>
 
 // Initial boot
 fetchAgents();
-pollInterval = setInterval(fetchAgents, 3000);
+
+// Reactive polling: update agents list and active tab stream
+pollInterval = setInterval(() => {
+  fetchAgents();
+  if (selectedAgent) {
+    if (activeTab === 'terminal') {
+      fetchTerminal();
+    } else if (activeTab === 'result' && selectedAgent.status === 'working') {
+      fetchResult();
+    }
+  }
+}, 3000);
