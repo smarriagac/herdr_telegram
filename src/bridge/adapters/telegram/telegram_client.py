@@ -8,6 +8,7 @@ import urllib.parse
 import urllib.request
 from typing import Any, Dict, List, Optional
 
+from bridge.application.terminal_formatter import safe_truncate_html
 from bridge.domain.ports import TelegramPort
 
 logger = logging.getLogger("herdr-bridge.telegram")
@@ -56,9 +57,12 @@ class TelegramClient(TelegramPort):
         message_thread_id: Optional[int] = None,
         parse_mode: str = "HTML",
     ) -> Optional[Dict[str, Any]]:
-        # Enforce Telegram 4096 character limit
+        # Enforce Telegram 4096 character limit safely
         if len(text) > 4000:
-            text = text[:3990] + "\n\n<i>[Truncado...]</i>"
+            if parse_mode == "HTML":
+                text = safe_truncate_html(text, max_chars=3950)
+            else:
+                text = text[:3950] + "\n\n[Truncado...]"
 
         payload: Dict[str, Any] = {
             "chat_id": chat_id,
@@ -82,7 +86,10 @@ class TelegramClient(TelegramPort):
         parse_mode: str = "HTML",
     ) -> Optional[Dict[str, Any]]:
         if len(text) > 4000:
-            text = text[:3990] + "\n\n<i>[Truncado...]</i>"
+            if parse_mode == "HTML":
+                text = safe_truncate_html(text, max_chars=3950)
+            else:
+                text = text[:3950] + "\n\n[Truncado...]"
 
         payload: Dict[str, Any] = {
             "chat_id": chat_id,

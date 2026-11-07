@@ -7,6 +7,10 @@ import time
 from typing import Dict, Optional, Set
 
 from bridge.application.agent_service import AgentBridgeService
+from bridge.application.terminal_formatter import (
+    clean_terminal_output,
+    safe_truncate_html,
+)
 from bridge.domain.models import STATUS_CONFIG, AgentInfo
 from bridge.domain.ports import HerdrDriverPort, StateRepositoryPort, TelegramPort
 
@@ -119,10 +123,12 @@ class StateWatcher:
         markup = None
 
         if new_status == "blocked":
-            ok, out = self.driver.read_terminal(agent.id, lines=10)
+            ok, out = self.driver.read_terminal(agent.id, lines=15)
             if ok and out.strip():
-                clean_out = html.escape(out.strip())
-                msg += f"\n\n❓ <b>Esperando respuesta:</b>\n<pre>{clean_out}</pre>"
+                clean_out = clean_terminal_output(out.strip())
+                escaped = html.escape(clean_out)
+                pre_block = safe_truncate_html(f"<pre>{escaped}</pre>", max_chars=1200)
+                msg += f"\n\n❓ <b>Esperando respuesta:</b>\n{pre_block}"
 
             markup = {
                 "inline_keyboard": [
@@ -149,8 +155,8 @@ class StateWatcher:
                 "inline_keyboard": [
                     [
                         {
-                            "text": f"📄 Ver resultado [{btn_label}]",
-                            "callback_data": f"act|read|{agent.id}",
+                            "text": f"🎯 Ver resultado [{btn_label}]",
+                            "callback_data": f"act|result|{agent.id}",
                         }
                     ]
                 ]

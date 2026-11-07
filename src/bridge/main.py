@@ -89,6 +89,7 @@ def main(cli_args: Optional[list] = None):
     # 3. Setup Commands in Telegram
     telegram_client.set_my_commands([
         {"command": "status", "description": "Ver panel de todos los agentes (Desktop y Terminal)"},
+        {"command": "result", "description": "Ver resultado final del agente"},
         {"command": "new", "description": "Crear un nuevo proyecto/espacio"},
         {"command": "resume", "description": "Reanudar sesión reteniendo contexto previo"},
         {"command": "read", "description": "Ver salida reciente de terminal"},

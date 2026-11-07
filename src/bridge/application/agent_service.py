@@ -6,6 +6,12 @@ import os
 import re
 from typing import Any, Dict, List, Optional, Tuple
 
+from bridge.application.terminal_formatter import (
+    clean_terminal_output,
+    extract_agent_result,
+    format_telegram_markdown,
+    safe_truncate_html,
+)
 from bridge.domain.models import STATUS_CONFIG, AgentInfo, TopicBinding
 from bridge.domain.ports import HerdrDriverPort, StateRepositoryPort, TelegramPort
 
@@ -228,14 +234,123 @@ class AgentBridgeService:
         keys = key_map.get(key_name.lower(), [key_name])
         return self.driver.send_keys(target, keys)
 
+    def _resolve_agent_context(
+        self, target: str
+    ) -> Tuple[str, str, str, str, str]:
+        """Resolves target agent into (display_name, status_icon, status_label, engine, backend_tag)."""
+        target_clean = target.strip()
+        agents, _ = self.driver.list_agents()
+        if agents:
+            for ag in agents:
+                if target_clean in (ag.id, ag.workspace_label, ag.name, ag.workspace_id):
+                    st = ag.status
+                    info = STATUS_CONFIG.get(st, STATUS_CONFIG["unknown"])
+                    backend_tag = "[Desktop]" if ag.backend == "app" else "[Terminal]"
+                    return (
+                        ag.display_name or ag.workspace_label or ag.id,
+                        info["icon"],
+                        info["label"],
+                        ag.engine,
+                        backend_tag,
+                    )
+
+        # Fallback to topic repository
+        topic = self.topic_repo.get_topic_by_workspace(target_clean)
+        if topic:
+            backend_tag = (
+                f"[{topic.backend.title()}]" if topic.backend != "auto" else ""
+            )
+            return (
+                target_clean,
+                "💤",
+                "En espera",
+                topic.engine,
+                backend_tag,
+            )
+
+        return (target_clean, "❓", "Desconocido", "agy", "")
+
+    def read_agent_result(
+        self, target: str, lines: int = 120
+    ) -> Tuple[str, Optional[Dict[str, Any]]]:
+        """Reads recent agent output and formats the meaningful result for Telegram."""
+        display_name, icon, status_label, engine, backend_tag = (
+            self._resolve_agent_context(target)
+        )
+        ok, out = self.driver.read_terminal(target, lines=lines)
+        if not ok or not out.strip():
+            header = (
+                f"╭─ 🎯 <b>Resultado: {html.escape(display_name)}</b>"
+                + (f" <code>{backend_tag}</code>\n" if backend_tag else "\n")
+                + f"│  Estado: {icon} <b>{status_label}</b> · Motor: <code>{html.escape(engine)}</code>\n"
+                f"╰──────────────────────────\n\n"
+            )
+            return (
+                f"{header}📄 <i>No hay salida reciente ni resultado disponible para este agente.</i>",
+                {
+                    "inline_keyboard": [
+                        [
+                            {
+                                "text": "🔄 Recargar",
+                                "callback_data": f"act|result_reload|{target}",
+                            },
+                            {
+                                "text": "📋 Panel Principal",
+                                "callback_data": "act|refresh",
+                            },
+                        ]
+                    ]
+                },
+            )
+
+        # Extract the substantive result and format it safely for Telegram
+        extracted = extract_agent_result(out)
+        formatted_body = format_telegram_markdown(extracted)
+
+        header = (
+            f"╭─ 🎯 <b>Resultado: {html.escape(display_name)}</b>"
+            + (f" <code>{backend_tag}</code>\n" if backend_tag else "\n")
+            + f"│  Estado: {icon} <b>{status_label}</b> · Motor: <code>{html.escape(engine)}</code>\n"
+            f"╰──────────────────────────\n\n"
+        )
+
+        full_message = safe_truncate_html(header + formatted_body, max_chars=3900)
+
+        markup = {
+            "inline_keyboard": [
+                [
+                    {
+                        "text": "🔄 Recargar",
+                        "callback_data": f"act|result_reload|{target}",
+                    },
+                    {
+                        "text": "💬 Nueva Orden",
+                        "callback_data": f"act|prompt|{target}",
+                    },
+                ],
+                [
+                    {
+                        "text": "🖥️ Terminal Cruda",
+                        "callback_data": f"act|read|{target}",
+                    },
+                    {
+                        "text": "📋 Panel Principal",
+                        "callback_data": "act|refresh",
+                    },
+                ],
+            ]
+        }
+        return full_message, markup
+
     def read_terminal(
-        self, target: str, lines: int = 25
+        self, target: str, lines: int = 30
     ) -> Tuple[str, Optional[Dict[str, Any]]]:
         """Reads recent terminal output and returns formatted HTML pre block."""
+        display_name, _, _, _, _ = self._resolve_agent_context(target)
         ok, out = self.driver.read_terminal(target, lines=lines)
         if not ok or not out.strip():
             return (
-                f"📄 <i>Terminal sin salida reciente para {html.escape(target)}.</i>",
+                f"📄 <i>Terminal sin salida reciente para {html.escape(display_name)}.</i>",
                 {
                     "inline_keyboard": [
                         [{"text": "🔄 Recargar", "callback_data": f"act|read_reload|{target}"}]
@@ -243,11 +358,17 @@ class AgentBridgeService:
                 },
             )
 
-        clean_out = html.escape(out.strip())
+        clean_out = clean_terminal_output(out)
+        escaped_out = html.escape(clean_out)
+        pre_block = safe_truncate_html(f"<pre>{escaped_out}</pre>", max_chars=3800)
+
         markup = {
             "inline_keyboard": [
                 [
                     {"text": "🔄 Recargar", "callback_data": f"act|read_reload|{target}"},
+                    {"text": "🎯 Ver Resultado", "callback_data": f"act|result|{target}"},
+                ],
+                [
                     {"text": "✅ Enter", "callback_data": f"act|enter|{target}"},
                     {"text": "❌ Cancelar", "callback_data": f"act|esc|{target}"},
                 ],
@@ -257,7 +378,7 @@ class AgentBridgeService:
             ]
         }
         return (
-            f"📄 <b>Salida de Terminal ({html.escape(target)}):</b>\n<pre>{clean_out}</pre>",
+            f"📄 <b>Salida de Terminal ({html.escape(display_name)}):</b>\n{pre_block}",
             markup,
         )
 

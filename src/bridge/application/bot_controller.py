@@ -113,6 +113,13 @@ class BotController:
                 chat_id, resp, reply_markup=markup, message_thread_id=thread_id
             )
             return
+        elif clean_lower in ("🎯 ver resultado", "ver resultado", "resultado"):
+            target = matched_workspace or "1"
+            resp, markup = self.service.read_agent_result(target)
+            self.telegram.send_message(
+                chat_id, resp, reply_markup=markup, message_thread_id=thread_id
+            )
+            return
         elif clean_lower in ("❓ ayuda / comandos", "ayuda"):
             self.telegram.send_message(
                 chat_id,
@@ -165,6 +172,13 @@ class BotController:
             target = args[0] if args else (matched_workspace or "1")
             lines = int(args[1]) if len(args) > 1 and args[1].isdigit() else 25
             resp, markup = self.service.read_terminal(target, lines=lines)
+            self.telegram.send_message(
+                chat_id, resp, reply_markup=markup, message_thread_id=thread_id
+            )
+        elif cmd in ("/result", "/res"):
+            target = args[0] if args else (matched_workspace or "1")
+            lines = int(args[1]) if len(args) > 1 and args[1].isdigit() else 120
+            resp, markup = self.service.read_agent_result(target, lines=lines)
             self.telegram.send_message(
                 chat_id, resp, reply_markup=markup, message_thread_id=thread_id
             )
@@ -271,6 +285,18 @@ class BotController:
                 message_thread_id=thread_id,
             )
 
+        elif action in ("result", "result_reload") and target:
+            self.telegram.answer_callback_query(cq_id, "Cargando resultado...")
+            text, markup = self.service.read_agent_result(target)
+            if action == "result_reload" and msg_id:
+                self.telegram.edit_message_text(
+                    chat_id, msg_id, text, reply_markup=markup
+                )
+            else:
+                self.telegram.send_message(
+                    chat_id, text, reply_markup=markup, message_thread_id=thread_id
+                )
+
         elif action in ("read", "read_reload") and target:
             self.telegram.answer_callback_query(cq_id, "Cargando salida...")
             text, markup = self.service.read_terminal(target, lines=25)
@@ -310,6 +336,7 @@ class BotController:
             "╰──────────────────────────\n\n"
             "💬 <b>En Temas Dedicados (#📁 proyecto):</b>\n"
             "• Escribí directamente cualquier texto para enviarlo como prompt al agente.\n"
+            "• <code>/result</code>: Ver el resultado final o resumen del agente.\n"
             "• <code>/read</code>: Ver terminal reciente.\n"
             "• <code>/enter</code>: Confirmar (Enter).\n"
             "• <code>/yes</code>: Responder Sí (y + Enter).\n"
