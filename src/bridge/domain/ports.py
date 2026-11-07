@@ -158,6 +158,16 @@ class TelegramPort(ABC):
         """Downloads raw bytes of a file from Telegram API."""
         raise NotImplementedError
 
+    def set_chat_menu_button(
+        self, chat_id: Optional[int] = None, menu_button: Optional[Dict[str, Any]] = None
+    ) -> bool:
+        """Configures the bottom-left menu button in Telegram."""
+        return True
+
+    def get_me(self) -> Optional[Dict[str, Any]]:
+        """Retrieves bot account details."""
+        return None
+
     @abstractmethod
     def get_updates(
         self, offset: Optional[int] = None, timeout: int = 30

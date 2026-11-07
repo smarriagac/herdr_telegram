@@ -114,10 +114,19 @@ def main(cli_args: Optional[list] = None):
         url = tunnel.start(timeout=20.0)
         if url:
             logger.info("Mini App is available online at: %s", url)
+            ok = telegram_client.set_chat_menu_button(
+                menu_button={"type": "web_app", "text": "Mini App", "web_app": {"url": url}}
+            )
+            if ok:
+                logger.info("Telegram chat menu button configured with Mini App URL.")
         else:
             logger.warning("Could not obtain Cloudflare Tunnel URL.")
 
     threading.Thread(target=_start_tunnel, name="TunnelInitThread", daemon=True).start()
+
+    bot_info = telegram_client.get_me()
+    if bot_info:
+        logger.info("Connected to Telegram as @%s (%s)", bot_info.get("username"), bot_info.get("first_name"))
 
     # 4. Setup Commands in Telegram
     telegram_client.set_my_commands([

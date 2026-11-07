@@ -129,9 +129,12 @@ class BotController:
             return
 
         # 3. Persistent keyboard triggers
+        is_private = bool(chat_id and chat_id > 0)
         clean_lower = text.lower()
         if clean_lower in ("🤖 mis agentes", "mis agentes"):
-            resp, markup = self.service.build_status_reply(app_url=self.get_app_url())
+            resp, markup = self.service.build_status_reply(
+                app_url=self.get_app_url(), is_private=is_private
+            )
             self.telegram.send_message(
                 chat_id, resp, reply_markup=markup, message_thread_id=thread_id
             )
@@ -178,7 +181,9 @@ class BotController:
                 message_thread_id=thread_id,
             )
         elif cmd in ("/status", "/agents"):
-            resp, markup = self.service.build_status_reply(app_url=self.get_app_url())
+            resp, markup = self.service.build_status_reply(
+                app_url=self.get_app_url(), is_private=is_private
+            )
             self.telegram.send_message(
                 chat_id, resp, reply_markup=markup, message_thread_id=thread_id
             )
@@ -290,7 +295,10 @@ class BotController:
 
         if action == "refresh":
             self.telegram.answer_callback_query(cq_id, "Actualizando...")
-            text, markup = self.service.build_status_reply(app_url=self.get_app_url())
+            is_private = bool(chat_id and chat_id > 0)
+            text, markup = self.service.build_status_reply(
+                app_url=self.get_app_url(), is_private=is_private
+            )
             if msg_id:
                 self.telegram.edit_message_text(
                     chat_id, msg_id, text, reply_markup=markup
@@ -447,18 +455,27 @@ class BotController:
 
     def _send_mini_app(self, chat_id: int, thread_id: Optional[int]):
         app_url = self.get_app_url()
+        is_private = bool(chat_id and chat_id > 0)
+        bot_user = getattr(self.telegram, "bot_username", None) or "huwuh_bot"
+
         if app_url:
             msg = (
                 "╭─ 📱 <b>Herdr Mini App</b>\n"
                 "╰──────────────────────────\n\n"
                 "Panel táctil interactivo para monitorear agentes, ver terminales y enviar órdenes en tiempo real."
             )
-            markup = {
-                "inline_keyboard": [
+            if is_private:
+                kb = [
                     [{"text": "🚀 Abrir Mini App", "web_app": {"url": app_url}}],
                     [{"text": "🔄 Actualizar Panel", "callback_data": "act|refresh"}],
                 ]
-            }
+            else:
+                kb = [
+                    [{"text": "🌐 Abrir Web App", "url": app_url}],
+                    [{"text": "📱 Abrir Mini App en Chat Privado", "url": f"https://t.me/{bot_user}"}],
+                    [{"text": "🔄 Actualizar Panel", "callback_data": "act|refresh"}],
+                ]
+            markup = {"inline_keyboard": kb}
             self.telegram.send_message(
                 chat_id, msg, reply_markup=markup, message_thread_id=thread_id
             )

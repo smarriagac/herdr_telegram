@@ -149,6 +149,42 @@ class TestBotControllerMiniApp(unittest.TestCase):
         inline_kb = reply_markup.get("inline_keyboard", [])
         self.assertEqual(inline_kb[0][0]["web_app"]["url"], "https://active-test.trycloudflare.com")
 
+    def test_app_command_in_group_chat(self):
+        mock_telegram = MagicMock()
+        mock_telegram.bot_username = "huwuh_bot"
+        mock_service = MagicMock()
+        mock_repo = MagicMock()
+
+        tunnel = MagicMock()
+        tunnel.public_url = "https://active-test.trycloudflare.com"
+
+        controller = BotController(
+            service=mock_service,
+            topic_repo=mock_repo,
+            telegram=mock_telegram,
+            allowed_chat_id=123,
+            group_chat_id=-1001234567,
+            tunnel=tunnel,
+        )
+
+        update = {
+            "message": {
+                "chat": {"id": -1001234567},
+                "from": {"id": 123},
+                "text": "/app",
+            }
+        }
+        controller.process_update(update)
+
+        mock_telegram.send_message.assert_called_once()
+        args, kwargs = mock_telegram.send_message.call_args
+        self.assertEqual(args[0], -1001234567)
+        reply_markup = kwargs.get("reply_markup", {})
+        inline_kb = reply_markup.get("inline_keyboard", [])
+        # Group chat must NEVER have web_app in inline buttons to prevent BUTTON_TYPE_INVALID
+        self.assertNotIn("web_app", inline_kb[0][0])
+        self.assertEqual(inline_kb[0][0]["url"], "https://active-test.trycloudflare.com")
+
 
 if __name__ == "__main__":
     unittest.main()

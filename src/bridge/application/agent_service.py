@@ -106,7 +106,7 @@ class AgentBridgeService:
         return None
 
     def build_status_reply(
-        self, app_url: Optional[str] = None
+        self, app_url: Optional[str] = None, is_private: bool = True
     ) -> Tuple[str, Dict[str, Any]]:
         """Constructs an interactive status dashboard of all running agents."""
         agents, err = self.driver.list_agents()
@@ -124,7 +124,12 @@ class AgentBridgeService:
                 ]
             ]
             if app_url:
-                empty_kb.insert(0, [{"text": "📱 Abrir Mini App", "web_app": {"url": app_url}}])
+                app_btn = (
+                    {"text": "📱 Abrir Mini App", "web_app": {"url": app_url}}
+                    if is_private
+                    else {"text": "🌐 Abrir Web App", "url": app_url}
+                )
+                empty_kb.insert(0, [app_btn])
             return (
                 "🤖 <b>No hay agentes activos en ejecución.</b>\n\n"
                 "Podés iniciar uno tocando <b>➕ Nuevo Agente</b> o con <code>/new &lt;nombre&gt;</code>.",
@@ -136,7 +141,12 @@ class AgentBridgeService:
         buttons: List[List[Dict[str, Any]]] = []
 
         if app_url:
-            buttons.append([{"text": "📱 Abrir Mini App", "web_app": {"url": app_url}}])
+            app_btn = (
+                {"text": "📱 Abrir Mini App", "web_app": {"url": app_url}}
+                if is_private
+                else {"text": "🌐 Abrir Web App", "url": app_url}
+            )
+            buttons.append([app_btn])
 
         for ag in agents:
             st = ag.status

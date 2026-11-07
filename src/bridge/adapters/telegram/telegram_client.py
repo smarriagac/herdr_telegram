@@ -20,6 +20,7 @@ class TelegramClient(TelegramPort):
     def __init__(self, bot_token: str):
         self.bot_token = bot_token
         self.base_url = f"https://api.telegram.org/bot{bot_token}"
+        self.bot_username: Optional[str] = None
 
     def _call_api(
         self, method: str, payload: Optional[Dict[str, Any]] = None, timeout: int = 35
@@ -102,6 +103,25 @@ class TelegramClient(TelegramPort):
             payload["reply_markup"] = reply_markup
 
         return self._call_api("editMessageText", payload)
+
+    def get_me(self) -> Optional[Dict[str, Any]]:
+        res = self._call_api("getMe")
+        if res and res.get("ok"):
+            info = res.get("result", {})
+            self.bot_username = info.get("username")
+            return info
+        return None
+
+    def set_chat_menu_button(
+        self, chat_id: Optional[int] = None, menu_button: Optional[Dict[str, Any]] = None
+    ) -> bool:
+        payload: Dict[str, Any] = {}
+        if chat_id is not None:
+            payload["chat_id"] = chat_id
+        if menu_button is not None:
+            payload["menu_button"] = menu_button
+        res = self._call_api("setChatMenuButton", payload)
+        return bool(res and res.get("ok"))
 
     def answer_callback_query(
         self,
