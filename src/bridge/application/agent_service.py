@@ -83,9 +83,23 @@ class AgentBridgeService:
                 "• <code>/esc</code>: Cancelar diálogo\n"
                 "• <code>/read</code>: Ver terminal"
             )
+            welcome_markup = {
+                "inline_keyboard": [
+                    [
+                        {"text": "🧪 Tests", "callback_data": f"act|quick|test|{workspace_name}"},
+                        {"text": "📊 Git Diff", "callback_data": f"act|quick|diff|{workspace_name}"},
+                        {"text": "🛑 Abortar", "callback_data": f"act|esc|{workspace_name}"},
+                    ],
+                    [
+                        {"text": "🎯 Ver Resultado", "callback_data": f"act|result|{workspace_name}"},
+                        {"text": "📄 Ver Terminal", "callback_data": f"act|read|{workspace_name}"},
+                    ],
+                ]
+            }
             self.telegram.send_message(
                 self.group_chat_id,
                 welcome_text,
+                reply_markup=welcome_markup,
                 message_thread_id=thread_id,
             )
             return thread_id
@@ -326,6 +340,20 @@ class AgentBridgeService:
                     {
                         "text": "💬 Nueva Orden",
                         "callback_data": f"act|prompt|{target}",
+                    },
+                ],
+                [
+                    {
+                        "text": "🧪 Tests",
+                        "callback_data": f"act|quick|test|{target}",
+                    },
+                    {
+                        "text": "📊 Git Diff",
+                        "callback_data": f"act|quick|diff|{target}",
+                    },
+                    {
+                        "text": "🛑 Abortar",
+                        "callback_data": f"act|esc|{target}",
                     },
                 ],
                 [

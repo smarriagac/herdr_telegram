@@ -138,6 +138,22 @@ class TelegramClient(TelegramPort):
         res = self._call_api("closeForumTopic", payload)
         return bool(res and res.get("ok"))
 
+    def get_file(self, file_id: str) -> Optional[Dict[str, Any]]:
+        res = self._call_api("getFile", {"file_id": file_id})
+        if res and res.get("ok"):
+            return res.get("result")
+        return None
+
+    def download_file(self, file_path: str) -> Optional[bytes]:
+        url = f"https://api.telegram.org/file/bot{self.bot_token}/{file_path}"
+        try:
+            req = urllib.request.Request(url)
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                return resp.read()
+        except Exception as e:
+            logger.error("Error downloading file %s: %s", file_path, e)
+            return None
+
     def get_updates(
         self, offset: Optional[int] = None, timeout: int = 30
     ) -> List[Dict[str, Any]]:

@@ -21,6 +21,8 @@ class BridgeConfig:
     hc_bin: str = "hc"
     projects_dir: str = "~/proyectos"
     topics_file: str = ""
+    groq_api_key: Optional[str] = None
+    openai_api_key: Optional[str] = None
 
     def __post_init__(self):
         if not self.topics_file:
@@ -86,4 +88,6 @@ def load_config(config_path: Optional[str] = None) -> BridgeConfig:
         hc_bin=data.get("hc_bin", "hc"),
         projects_dir=data.get("projects_dir", "~/proyectos"),
         topics_file=data.get("topics_file", topics_default),
+        groq_api_key=data.get("groq_api_key") or os.environ.get("GROQ_API_KEY"),
+        openai_api_key=data.get("openai_api_key") or os.environ.get("OPENAI_API_KEY"),
     )

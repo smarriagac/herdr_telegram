@@ -149,6 +149,16 @@ class TelegramPort(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def get_file(self, file_id: str) -> Optional[Dict[str, Any]]:
+        """Retrieves file info from Telegram API."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def download_file(self, file_path: str) -> Optional[bytes]:
+        """Downloads raw bytes of a file from Telegram API."""
+        raise NotImplementedError
+
+    @abstractmethod
     def get_updates(
         self, offset: Optional[int] = None, timeout: int = 30
     ) -> List[Dict[str, Any]]:

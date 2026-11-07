@@ -11,6 +11,7 @@ from bridge.adapters.drivers.app_driver import HerdrAppDriver
 from bridge.adapters.drivers.classic_driver import ClassicHerdrDriver
 from bridge.adapters.drivers.composite_driver import CompositeHerdrDriver
 from bridge.adapters.persistence.json_topic_repository import JsonTopicRepository
+from bridge.adapters.speech import SpeechTranscriber
 from bridge.adapters.telegram.telegram_client import TelegramClient
 from bridge.application.agent_service import AgentBridgeService
 from bridge.application.bot_controller import BotController
@@ -78,12 +79,18 @@ def main(cli_args: Optional[list] = None):
         telegram=telegram_client,
     )
 
+    speech_transcriber = SpeechTranscriber(
+        groq_api_key=config.groq_api_key,
+        openai_api_key=config.openai_api_key,
+    )
+
     controller = BotController(
         service=agent_service,
         topic_repo=topic_repo,
         telegram=telegram_client,
         allowed_chat_id=config.allowed_chat_id,
         group_chat_id=config.group_chat_id,
+        transcriber=speech_transcriber,
     )
 
     # 3. Setup Commands in Telegram

@@ -4,11 +4,12 @@ import html
 import logging
 import threading
 import time
-from typing import Dict, Optional, Set
+from typing import Any, Dict, Optional, Set
 
 from bridge.application.agent_service import AgentBridgeService
 from bridge.application.terminal_formatter import (
     clean_terminal_output,
+    extract_live_activity,
     safe_truncate_html,
 )
 from bridge.domain.models import STATUS_CONFIG, AgentInfo
@@ -35,6 +36,7 @@ class StateWatcher:
         self.poll_interval = poll_interval
         self._stop_event = threading.Event()
         self._thread: Optional[threading.Thread] = None
+        self._active_banners: Dict[str, Dict[str, Any]] = {}
 
     def start(self):
         if self._thread and self._thread.is_alive():
@@ -89,15 +91,63 @@ class StateWatcher:
                                 )
                         known_states[pid] = st
 
-                    # Cleanup finished agents from known_states
+                        # Periodic live banner update for working agents
+                        if st == "working" and pid in self._active_banners:
+                            self._update_live_banner(ag)
+
+                    # Cleanup finished agents from known_states and active banners
                     for stale in list(known_states.keys()):
                         if stale not in current_pids:
                             del known_states[stale]
+                            self._active_banners.pop(stale, None)
 
             except Exception as e:
                 logger.error("Error in state watcher loop: %s", e)
 
             self._stop_event.wait(self.poll_interval)
+
+    def _update_live_banner(self, agent: AgentInfo):
+        banner = self._active_banners.get(agent.id)
+        if not banner or not banner.get("message_id"):
+            return
+        now = time.time()
+        if now - banner.get("last_edit", 0) < 4.0:
+            return
+
+        elapsed = int(now - banner["start_time"])
+        ok, out = self.driver.read_terminal(agent.id, lines=5)
+        activity = extract_live_activity(out) if ok and out else "Procesando..."
+
+        if (
+            activity != banner.get("last_activity")
+            or elapsed - banner.get("last_elapsed", 0) >= 5
+        ):
+            banner["last_activity"] = activity
+            banner["last_elapsed"] = elapsed
+            banner["last_edit"] = now
+
+            display_name = agent.display_name or agent.id
+            backend_tag = "[Desktop]" if agent.backend == "app" else "[Terminal]"
+            live_text = (
+                f"╭─ ⚡ <b>{html.escape(display_name)}</b> <code>{backend_tag}</code>\n"
+                f"│  Estado: <b>⚡ Trabajando ({elapsed}s)</b>\n"
+                f"│  Actividad: <code>{html.escape(activity)}</code>\n"
+                f"╰──────────────────────────"
+            )
+            live_markup = {
+                "inline_keyboard": [
+                    [
+                        {"text": "🛑 Abortar", "callback_data": f"act|esc|{agent.id}"},
+                        {"text": "📄 Ver Terminal", "callback_data": f"act|read|{agent.id}"},
+                    ]
+                ]
+            }
+            self.telegram.edit_message_text(
+                banner["chat_id"],
+                banner["message_id"],
+                live_text,
+                reply_markup=live_markup,
+            )
 
     def _handle_state_transition(
         self,
@@ -111,24 +161,124 @@ class StateWatcher:
         old_info = STATUS_CONFIG.get(old_status, STATUS_CONFIG["unknown"])
         display_name = agent.display_name or agent.id
         btn_label = agent.name or agent.workspace_label or agent.id
-
         backend_tag = "[Desktop]" if agent.backend == "app" else "[Terminal]"
 
-        msg = (
-            f"╭─ 🔔 <b>Actualización de Estado</b> <code>{backend_tag}</code>\n"
-            f"│  📁 Proyecto: <b>{html.escape(display_name)}</b>\n"
-            f"│  Transición: {old_info['icon']} ➔ <b>{new_info['icon']} {new_info['label']}</b>\n"
-            f"╰──────────────────────────"
-        )
-        markup = None
+        if new_status == "working":
+            start_t = time.time()
+            msg = (
+                f"╭─ ⚡ <b>{html.escape(display_name)}</b> <code>{backend_tag}</code>\n"
+                f"│  Estado: <b>⚡ Iniciando tarea...</b>\n"
+                f"╰──────────────────────────"
+            )
+            markup = {
+                "inline_keyboard": [
+                    [
+                        {"text": "🛑 Abortar", "callback_data": f"act|esc|{agent.id}"},
+                        {"text": "📄 Ver Terminal", "callback_data": f"act|read|{agent.id}"},
+                    ]
+                ]
+            }
+            res = self.telegram.send_message(
+                chat_id,
+                msg,
+                reply_markup=markup,
+                message_thread_id=thread_id,
+            )
+            msg_id = res.get("result", {}).get("message_id") if res else None
+            if msg_id:
+                self._active_banners[agent.id] = {
+                    "chat_id": chat_id,
+                    "message_id": msg_id,
+                    "thread_id": thread_id,
+                    "start_time": start_t,
+                    "last_activity": "",
+                    "last_elapsed": 0,
+                    "last_edit": start_t,
+                }
+            return
 
-        if new_status == "blocked":
+        elif new_status in ("idle", "done") and old_status == "working":
+            banner = self._active_banners.pop(agent.id, None)
+            dur_line = ""
+            if banner:
+                elapsed = int(time.time() - banner["start_time"])
+                dur_line = (
+                    f"│  ⏱️ Duración: <b>{elapsed}s</b> · Motor: <code>{html.escape(agent.engine)}</code>\n"
+                )
+
+            msg = (
+                f"╭─ 🎉 <b>¡Tarea Completada!</b> <code>{backend_tag}</code>\n"
+                f"│  📁 Proyecto: <b>{html.escape(display_name)}</b>\n"
+                f"{dur_line}"
+                f"╰──────────────────────────"
+            )
+            markup = {
+                "inline_keyboard": [
+                    [
+                        {
+                            "text": f"🎯 Ver resultado [{btn_label}]",
+                            "callback_data": f"act|result|{agent.id}",
+                        },
+                        {
+                            "text": "💬 Nueva Orden",
+                            "callback_data": f"act|prompt|{agent.id}",
+                        },
+                    ],
+                    [
+                        {
+                            "text": "🧪 Tests",
+                            "callback_data": f"act|quick|test|{agent.id}",
+                        },
+                        {
+                            "text": "📊 Git Diff",
+                            "callback_data": f"act|quick|diff|{agent.id}",
+                        },
+                        {
+                            "text": "🛑 Abortar",
+                            "callback_data": f"act|esc|{agent.id}",
+                        },
+                    ],
+                    [
+                        {
+                            "text": "📄 Ver Terminal",
+                            "callback_data": f"act|read|{agent.id}",
+                        },
+                        {
+                            "text": "📋 Panel Principal",
+                            "callback_data": "act|refresh",
+                        },
+                    ],
+                ]
+            }
+
+            if banner and banner.get("message_id"):
+                self.telegram.edit_message_text(
+                    banner["chat_id"],
+                    banner["message_id"],
+                    msg,
+                    reply_markup=markup,
+                )
+            else:
+                self.telegram.send_message(
+                    chat_id,
+                    msg,
+                    reply_markup=markup,
+                    message_thread_id=thread_id,
+                )
+            return
+
+        elif new_status == "blocked":
             ok, out = self.driver.read_terminal(agent.id, lines=15)
+            msg = (
+                f"╭─ ⏳ <b>Esperando Confirmación</b> <code>{backend_tag}</code>\n"
+                f"│  📁 Proyecto: <b>{html.escape(display_name)}</b>\n"
+                f"╰──────────────────────────"
+            )
             if ok and out.strip():
                 clean_out = clean_terminal_output(out.strip())
                 escaped = html.escape(clean_out)
                 pre_block = safe_truncate_html(f"<pre>{escaped}</pre>", max_chars=1200)
-                msg += f"\n\n❓ <b>Esperando respuesta:</b>\n{pre_block}"
+                msg += f"\n\n❓ <b>El agente solicita input:</b>\n{pre_block}"
 
             markup = {
                 "inline_keyboard": [
@@ -149,22 +299,23 @@ class StateWatcher:
                     ],
                 ]
             }
-        elif new_status in ("idle", "done") and old_status == "working":
-            msg += "\n\n🎉 <i>¡El agente completó la tarea asignada!</i>"
-            markup = {
-                "inline_keyboard": [
-                    [
-                        {
-                            "text": f"🎯 Ver resultado [{btn_label}]",
-                            "callback_data": f"act|result|{agent.id}",
-                        }
-                    ]
-                ]
-            }
+            self.telegram.send_message(
+                chat_id,
+                msg,
+                reply_markup=markup,
+                message_thread_id=thread_id,
+            )
+            return
 
+        # Generic state transition
+        msg = (
+            f"╭─ 🔔 <b>Actualización de Estado</b> <code>{backend_tag}</code>\n"
+            f"│  📁 Proyecto: <b>{html.escape(display_name)}</b>\n"
+            f"│  Transición: {old_info['icon']} ➔ <b>{new_info['icon']} {new_info['label']}</b>\n"
+            f"╰──────────────────────────"
+        )
         self.telegram.send_message(
             chat_id,
             msg,
-            reply_markup=markup,
             message_thread_id=thread_id,
         )

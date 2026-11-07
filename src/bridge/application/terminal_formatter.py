@@ -97,16 +97,18 @@ def format_telegram_markdown(text: str) -> str:
         placeholders.append(content)
         return f"___STASH_{idx}___"
 
-    # 1. Stash fenced code blocks
+    # 1. Stash fenced code blocks (auto-collapse long blocks/diffs with expandable blockquotes)
     def replace_code_block(m):
         lang = m.group(1) or ""
         code = m.group(2)
         clean_code = html.escape(code, quote=False)
         if lang:
-            block = f'<pre><code class="language-{lang}">{clean_code}</code></pre>'
+            inner = f'<pre><code class="language-{lang}">{clean_code}</code></pre>'
         else:
-            block = f"<pre>{clean_code}</pre>"
-        return stash(block)
+            inner = f"<pre>{clean_code}</pre>"
+        if clean_code.count("\n") >= 6 or lang in ("diff", "patch"):
+            return stash(f"<blockquote expandable>{inner}</blockquote>")
+        return stash(inner)
 
     text = re.sub(
         r"```([a-zA-Z0-9_\-]+)?\n?([\s\S]*?)```", replace_code_block, text
@@ -120,12 +122,13 @@ def format_telegram_markdown(text: str) -> str:
 
     text = re.sub(r"`([^`\n]+)`", replace_inline_code, text)
 
-    # 3. Stash blockquotes
+    # 3. Stash blockquotes (expandable if >= 3 lines)
     def replace_blockquote(m):
         content = m.group(0)
         lines = [re.sub(r"^>\s?", "", line) for line in content.splitlines()]
         escaped_lines = [html.escape(line, quote=False) for line in lines]
-        return stash(f"<blockquote>{chr(10).join(escaped_lines)}</blockquote>")
+        tag = "blockquote expandable" if len(lines) >= 3 else "blockquote"
+        return stash(f"<{tag}>{chr(10).join(escaped_lines)}</blockquote>")
 
     text = re.sub(r"(?m)(?:^>[^\n]*(?:\n|$))+", replace_blockquote, text)
 
@@ -156,6 +159,47 @@ def format_telegram_markdown(text: str) -> str:
         text = text.replace(f"___STASH_{idx}___", content)
 
     return text
+
+
+def extract_live_activity(raw: str) -> str:
+    """Extracts a concise one-line summary of what the agent is currently doing."""
+    clean = strip_ansi(raw)
+    lines = [l.strip() for l in clean.splitlines() if l.strip()]
+    for line in reversed(lines[-6:]):
+        # Spinner/activity indicator
+        m_spin = re.match(
+            r"^[⣾⣽⣻⢿⡿⣟⣯⣷⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏]\s+(.*)", line
+        )
+        if m_spin:
+            return m_spin.group(1)[:50]
+
+        # Thinking block
+        m_thought = re.match(
+            r"^▸\s*Thought(?:\s+for\s+([0-9a-zA-Z\s]+))?", line, re.I
+        )
+        if m_thought:
+            dur = m_thought.group(1) or ""
+            return f"Pensando... ({dur.strip()})" if dur else "Pensando..."
+
+        # Tool call like ● Bash(pytest) or ● Read(path)
+        m_tool = re.match(
+            r"^[●✔▶]\s*(?:\[\d{2}:\d{2}:\d{2}\]\s*)?([a-zA-Z0-9_\-]+)\((.*?)\)",
+            line,
+        )
+        if m_tool:
+            tool_name = m_tool.group(1)
+            arg = m_tool.group(2)
+            arg_short = arg.split("/")[-1] if "/" in arg else arg
+            return f"{tool_name}({arg_short})"[:50]
+
+        # General command line
+        m_cmd = re.match(
+            r"^[●✔▶]\s*(?:\[\d{2}:\d{2}:\d{2}\]\s*)?(.*)", line
+        )
+        if m_cmd and not m_cmd.group(1).startswith("Conversation"):
+            return m_cmd.group(1)[:50]
+
+    return "Procesando..."
 
 
 def safe_truncate_html(text: str, max_chars: int = 3900) -> str:

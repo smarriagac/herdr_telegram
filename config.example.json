@@ -6,5 +6,6 @@
   "herdr_bin": "herdr",
   "herdr_app_bin": "herdr-app",
   "hc_bin": "hc",
-  "projects_dir": "~/proyectos"
+  "projects_dir": "~/proyectos",
+  "groq_api_key": "YOUR_GROQ_API_KEY_OPTIONAL"
 }

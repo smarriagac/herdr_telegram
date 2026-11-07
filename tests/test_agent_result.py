@@ -15,6 +15,7 @@ class FakeDriver(HerdrDriverPort):
         self._output = output
         self._available = available
         self.read_calls: List[Tuple[str, int]] = []
+        self.sent_prompts: List[Tuple[str, str]] = []
 
     @property
     def name(self) -> str:
@@ -45,6 +46,7 @@ class FakeDriver(HerdrDriverPort):
         return True, "created", None
 
     def send_prompt(self, target_id: str, prompt_text: str) -> Tuple[bool, str]:
+        self.sent_prompts.append((target_id, prompt_text))
         return True, "ok"
 
     def send_keys(self, target_id: str, keys: List[str]) -> Tuple[bool, str]:
@@ -149,6 +151,12 @@ class FakeTelegram(TelegramPort):
 
     def close_forum_topic(self, chat_id: int, message_thread_id: int) -> bool:
         return True
+
+    def get_file(self, file_id: str) -> Optional[Dict[str, Any]]:
+        return {"file_id": file_id, "file_path": "voice/test.oga"}
+
+    def download_file(self, file_path: str) -> Optional[bytes]:
+        return b"fake-audio-bytes"
 
     def set_my_commands(self, commands: List[Dict[str, str]]) -> bool:
         return True
@@ -283,6 +291,80 @@ class TestAgentResult(unittest.TestCase):
         btn = markup["inline_keyboard"][0][0]
         self.assertEqual(btn["callback_data"], "act|result|w1:p1")
         self.assertIn("Ver resultado", btn["text"])
+
+    def test_callback_query_quick_action_dispatches_prompt(self):
+        cb_query = {
+            "id": "cq_quick_1",
+            "data": "act|quick|test|w1:p1",
+            "from": {"id": 12345},
+            "message": {
+                "message_id": 999,
+                "chat": {"id": 12345},
+            },
+        }
+        self.controller.process_update({"callback_query": cb_query})
+        self.assertEqual(len(self.driver.sent_prompts), 1)
+        target, prompt = self.driver.sent_prompts[0]
+        self.assertEqual(target, "w1:p1")
+        self.assertIn("tests", prompt.lower())
+
+    def test_state_watcher_live_banner_lifecycle(self):
+        watcher = StateWatcher(
+            service=self.service,
+            driver=self.driver,
+            topic_repo=self.topic_repo,
+            telegram=self.telegram,
+        )
+        agent = AgentInfo(id="w1:p1", workspace_label="demo", status="working")
+        
+        # 1. Transition to working -> creates live banner
+        watcher._handle_state_transition(
+            agent=agent,
+            old_status="idle",
+            new_status="working",
+            chat_id=12345,
+            thread_id=10,
+        )
+        self.assertEqual(len(self.telegram.sent_messages), 1)
+        banner_msg = self.telegram.sent_messages[0]
+        self.assertIn("Iniciando tarea", banner_msg["text"])
+        self.assertIn("w1:p1", watcher._active_banners)
+
+        # 2. Transition from working to idle -> edits banner into completion card
+        agent.status = "idle"
+        watcher._handle_state_transition(
+            agent=agent,
+            old_status="working",
+            new_status="idle",
+            chat_id=12345,
+            thread_id=10,
+        )
+        self.assertEqual(len(self.telegram.edited_messages), 1)
+        completed_card = self.telegram.edited_messages[0]
+        self.assertIn("¡Tarea Completada!", completed_card["text"])
+        self.assertNotIn("w1:p1", watcher._active_banners)
+
+    def test_voice_prompt_with_mock_transcriber(self):
+        class MockTranscriber:
+            is_configured = True
+            def transcribe(self, audio_bytes, filename):
+                return True, "corregir el bug de autenticación"
+
+        self.controller.transcriber = MockTranscriber()
+        self.topic_repo.save_topic(TopicBinding(workspace_name="demo-ws", thread_id=50))
+        self.controller.group_chat_id = 99999
+
+        voice_msg = {
+            "chat": {"id": 99999},
+            "from": {"id": 12345},
+            "message_thread_id": 50,
+            "voice": {"file_id": "voice_123"},
+        }
+        self.controller.process_update({"message": voice_msg})
+        self.assertEqual(len(self.driver.sent_prompts), 1)
+        target, prompt = self.driver.sent_prompts[0]
+        self.assertEqual(target, "demo-ws")
+        self.assertEqual(prompt, "corregir el bug de autenticación")
 
 
 if __name__ == "__main__":

@@ -2,6 +2,7 @@
 
 import html
 import logging
+import os
 import re
 from typing import Any, Dict, List, Optional
 
@@ -30,12 +31,14 @@ class BotController:
         telegram: TelegramPort,
         allowed_chat_id: int,
         group_chat_id: Optional[int] = None,
+        transcriber: Optional[Any] = None,
     ):
         self.service = service
         self.topic_repo = topic_repo
         self.telegram = telegram
         self.allowed_chat_id = allowed_chat_id
         self.group_chat_id = group_chat_id
+        self.transcriber = transcriber
 
     def process_update(self, update: Dict[str, Any]):
         """Processes a single update object."""
@@ -58,13 +61,31 @@ class BotController:
         thread_id = msg.get("message_thread_id")
         text = msg.get("text", "").strip()
 
-        if not self._is_authorized(chat_id, from_id) or not text:
+        if not self._is_authorized(chat_id, from_id):
             return
 
         # Check if message originated inside a dedicated project topic
         matched_workspace = None
         if chat_id == self.group_chat_id and thread_id:
             matched_workspace = self.topic_repo.get_workspace_by_thread_id(thread_id)
+
+        # Handle voice notes and audio messages
+        voice = msg.get("voice") or msg.get("audio")
+        if voice:
+            file_id = voice.get("file_id")
+            if matched_workspace and file_id:
+                self._handle_voice_prompt(chat_id, thread_id, matched_workspace, file_id)
+                return
+            elif file_id:
+                self.telegram.send_message(
+                    chat_id,
+                    "⚠️ <i>Las notas de voz deben enviarse dentro del tema dedicado al proyecto (#📁 proyecto).</i>",
+                    message_thread_id=thread_id,
+                )
+                return
+
+        if not text:
+            return
 
         # 1. ForceReply Handling
         reply_to = msg.get("reply_to_message", {})
@@ -285,6 +306,25 @@ class BotController:
                 message_thread_id=thread_id,
             )
 
+        elif action == "quick":
+            sub = parts[2] if len(parts) > 2 else ""
+            target_agent = parts[3] if len(parts) > 3 else target
+            prompts = {
+                "test": "Ejecutá la suite de tests del proyecto y reportá el resultado.",
+                "diff": "Mostrame las diferencias de git actuales con git diff --stat y git status.",
+                "push": "Hacé commit con conventional commits de los cambios pendientes y subilos con git push.",
+                "status": "Revisá el estado general del proyecto con git status.",
+            }
+            prompt_text = prompts.get(sub)
+            if prompt_text and target_agent:
+                self.telegram.answer_callback_query(cq_id, f"Iniciando {sub}...")
+                resp = self.service.send_prompt(target_agent, prompt_text)
+                self.telegram.send_message(
+                    chat_id, resp, message_thread_id=thread_id
+                )
+            else:
+                self.telegram.answer_callback_query(cq_id, "Acción rápida no disponible")
+
         elif action in ("result", "result_reload") and target:
             self.telegram.answer_callback_query(cq_id, "Cargando resultado...")
             text, markup = self.service.read_agent_result(target)
@@ -329,6 +369,64 @@ class BotController:
 
         else:
             self.telegram.answer_callback_query(cq_id)
+
+    def _handle_voice_prompt(
+        self, chat_id: int, thread_id: Optional[int], target: str, file_id: str
+    ):
+        """Processes an incoming voice message, transcribes it, and dispatches as prompt."""
+        if not self.transcriber or not self.transcriber.is_configured:
+            msg = (
+                "🎙️ <b>Nota de voz recibida</b>\n\n"
+                "Para transcribir notas de voz automáticamente en tiempo real (en ~300ms y gratis), "
+                "agregá tu clave de Groq en <code>~/.config/herdr-telegram/config.json</code>:\n"
+                '<code>"groq_api_key": "gsk_..."</code>'
+            )
+            self.telegram.send_message(chat_id, msg, message_thread_id=thread_id)
+            return
+
+        status_msg = self.telegram.send_message(
+            chat_id, "🎙️ <i>Transcribiendo nota de voz...</i>", message_thread_id=thread_id
+        )
+        status_msg_id = (
+            status_msg.get("result", {}).get("message_id") if status_msg else None
+        )
+
+        file_info = self.telegram.get_file(file_id)
+        file_path = file_info.get("file_path") if file_info else None
+        if not file_path:
+            if status_msg_id:
+                self.telegram.edit_message_text(
+                    chat_id, status_msg_id, "❌ Error al obtener el archivo de audio de Telegram."
+                )
+            return
+
+        audio_bytes = self.telegram.download_file(file_path)
+        if not audio_bytes:
+            if status_msg_id:
+                self.telegram.edit_message_text(
+                    chat_id, status_msg_id, "❌ Error al descargar el audio de Telegram."
+                )
+            return
+
+        ok, transcribed_text = self.transcriber.transcribe(
+            audio_bytes, filename=os.path.basename(file_path) or "voice.ogg"
+        )
+        if not ok or not transcribed_text.strip():
+            if status_msg_id:
+                self.telegram.edit_message_text(
+                    chat_id, status_msg_id, f"❌ {transcribed_text}"
+                )
+            return
+
+        if status_msg_id:
+            self.telegram.edit_message_text(
+                chat_id,
+                status_msg_id,
+                f"🎙️ <i>\"{html.escape(transcribed_text)}\"</i>\n\n⚡ <b>Enviando orden a {html.escape(target)}...</b>",
+            )
+
+        resp = self.service.send_prompt(target, transcribed_text)
+        self.telegram.send_message(chat_id, resp, message_thread_id=thread_id)
 
     def _build_help_text(self) -> str:
         return (
