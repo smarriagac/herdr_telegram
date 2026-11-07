@@ -409,7 +409,7 @@ class BotController:
             return
 
         ok, transcribed_text = self.transcriber.transcribe(
-            audio_bytes, filename=os.path.basename(file_path) or "voice.ogg"
+            audio_bytes, filename="voice.ogg"
         )
         if not ok or not transcribed_text.strip():
             if status_msg_id:

@@ -30,6 +30,23 @@ class TestSpeechTranscriber(unittest.TestCase):
         self.assertTrue(ok)
         self.assertEqual(text, "ejecutar pruebas unitarias")
 
+    @patch("bridge.adapters.speech.transcriber.requests.post")
+    def test_oga_extension_normalized_to_ogg(self, mock_post):
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {"text": "hola mundo"}
+        mock_post.return_value = mock_resp
+
+        transcriber = SpeechTranscriber(groq_api_key="gsk_123")
+        ok, text = transcriber.transcribe(b"fake-bytes", filename="file_0.oga")
+        self.assertTrue(ok)
+        self.assertEqual(text, "hola mundo")
+
+        # Verify the filename sent in files dictionary ends with .ogg, not .oga
+        call_kwargs = mock_post.call_args[1]
+        sent_filename = call_kwargs["files"]["file"][0]
+        self.assertTrue(sent_filename.endswith(".ogg"))
+
 
 if __name__ == "__main__":
     unittest.main()

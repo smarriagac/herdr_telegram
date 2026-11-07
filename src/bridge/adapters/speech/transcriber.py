@@ -30,6 +30,19 @@ class SpeechTranscriber:
         """Returns True if at least one speech-to-text backend is configured."""
         return bool(self.groq_api_key or self.openai_api_key)
 
+    def _normalize_filename(self, filename: str) -> str:
+        base, ext = os.path.splitext(filename)
+        ext_clean = ext.lower().lstrip(".")
+        allowed = {
+            "flac", "mp3", "mp4", "mpeg", "mpga", "m4a", "ogg", "opus", "wav", "webm"
+        }
+        if ext_clean in allowed:
+            return f"{base or 'audio'}.{ext_clean}"
+        # Telegram voice notes use .oga extension which Groq rejects; map to .ogg
+        if ext_clean == "oga" or not ext_clean:
+            return f"{base or 'voice'}.ogg"
+        return f"{base or 'voice'}.ogg"
+
     def transcribe(
         self, audio_bytes: bytes, filename: str = "voice.ogg"
     ) -> Tuple[bool, str]:
@@ -44,12 +57,14 @@ class SpeechTranscriber:
         if not HAS_REQUESTS:
             return False, "El módulo 'requests' no está instalado para llamar a la API de audio."
 
+        clean_filename = self._normalize_filename(filename)
+
         # Prefer Groq (ultra fast, ~300ms)
         if self.groq_api_key:
-            return self._transcribe_groq(audio_bytes, filename)
+            return self._transcribe_groq(audio_bytes, clean_filename)
 
         # Fallback to OpenAI Whisper
-        return self._transcribe_openai(audio_bytes, filename)
+        return self._transcribe_openai(audio_bytes, clean_filename)
 
     def _transcribe_groq(
         self, audio_bytes: bytes, filename: str
