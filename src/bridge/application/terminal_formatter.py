@@ -30,10 +30,12 @@ TUI_BOTTOM_PATTERNS = [
     re.compile(r"^\s*⎿\s*.*"),
     re.compile(r"^\s*>\s*/\w+.*"),
     re.compile(r"^\s*⚠\s*Conversation already open.*", re.I),
+    re.compile(r"^\s*●\s+.*", re.I),
 ]
 
 TOOL_LINE_PATTERN = re.compile(
-    r"^\s*(?:[●✔✖▶•]\s*(?:Bash|Read|Edit|Write|Glob|Grep|Task|Search|Run|Command|Todo|AskUser)|"
+    r"^\s*(?:●\s*(?:\[\d{2}:\d{2}:\d{2}\]|\(?[a-zA-Z0-9_\-]+\)?|cd\s+|[a-zA-Z0-9_\-\./]+)?|"
+    r"[✔✖▶]\s*(?:Bash|Read|Edit|Write|Glob|Grep|Task|Search|Run|Command|Todo|AskUser)|"
     r"▸\s*Thought|⎿\s*(?:Exited|Ran|Running))",
     re.I,
 )
@@ -130,18 +132,26 @@ def format_telegram_markdown(text: str) -> str:
     # 4. Escape remaining raw text (keep quotes as is for natural reading)
     text = html.escape(text, quote=False)
 
-    # 5. Headers: # Header -> 📌 <b>Header</b>
-    text = re.sub(r"(?m)^#{1,4}\s+([^\n]+)$", r"📌 <b>\1</b>", text)
+    # 5. Headers: # Header -> 📌 <b>Header</b> (supports leading whitespace and #{1,6})
+    text = re.sub(r"(?m)^[ \t]*#{1,6}[ \t]+([^\n]+)$", r"📌 <b>\1</b>", text)
 
-    # 6. Bold: **text**
+    # 6. Numbered section titles ending with colon (e.g. "1. Section description:")
+    text = re.sub(
+        r"(?m)^([ \t]*)(\d+\.[ \t]+[^:\n]{3,80}:)", r"\1<b>\2</b>", text
+    )
+
+    # 7. Bold: **text**
     text = re.sub(r"\*\*([^*]+)\*\*", r"<b>\1</b>", text)
 
-    # 7. Markdown links: [text](http...)
+    # 8. Markdown links: [text](http...)
     text = re.sub(
         r"\[([^\]]+)\]\((https?://[^\s\)]+)\)", r'<a href="\2">\1</a>', text
     )
 
-    # 8. Restore stashed blocks
+    # 9. Divider lines (long rules -> clean mobile divider)
+    text = re.sub(r"(?m)^[─═\-_]{3,}$", "──────────────────────────", text)
+
+    # 10. Restore stashed blocks
     for idx, content in enumerate(placeholders):
         text = text.replace(f"___STASH_{idx}___", content)
 

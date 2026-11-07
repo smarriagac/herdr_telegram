@@ -76,6 +76,26 @@ class TestTerminalFormatter(unittest.TestCase):
         self.assertIn('<pre><code class="language-python">def foo():\n    return 42\n</code></pre>', formatted)
         self.assertIn('<a href="https://github.com/org/repo/pull/1">PR</a>', formatted)
 
+    def test_indented_headers_and_trailing_tasks(self):
+        raw = (
+            "Auditoría completa terminada.\n"
+            "\n"
+            "  ### Resumen de lo realizado:\n"
+            "\n"
+            "  1. Escalado responsivo universal con ScreenUtil:\n"
+            "      • Se auditaron las vistas.\n"
+            "\n"
+            "───────────────────────────────────────────────────────────────────\n"
+            "  ● [15:18:10] cd /home/sm/proyectos && ./run running\n"
+        )
+        cleaned = clean_terminal_output(raw)
+        self.assertNotIn("15:18:10", cleaned)
+        self.assertNotIn("────────", cleaned)
+
+        formatted = format_telegram_markdown(cleaned)
+        self.assertIn("📌 <b>Resumen de lo realizado:</b>", formatted)
+        self.assertIn("<b>1. Escalado responsivo universal con ScreenUtil:</b>", formatted)
+
     def test_safe_truncate_html(self):
         # Truncate inside <b> and <code>
         long_text = "<b>Texto en negrita <code>" + "palabra " * 500 + "</code></b>"
