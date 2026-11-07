@@ -10,9 +10,11 @@ from typing import Optional
 from bridge.adapters.drivers.app_driver import HerdrAppDriver
 from bridge.adapters.drivers.classic_driver import ClassicHerdrDriver
 from bridge.adapters.drivers.composite_driver import CompositeHerdrDriver
+from bridge.adapters.http.api_server import HttpApiServer
 from bridge.adapters.persistence.json_topic_repository import JsonTopicRepository
 from bridge.adapters.speech import SpeechTranscriber
 from bridge.adapters.telegram.telegram_client import TelegramClient
+from bridge.adapters.tunnel.cloudflared import CloudflareTunnel
 from bridge.application.agent_service import AgentBridgeService
 from bridge.application.bot_controller import BotController
 from bridge.application.state_watcher import StateWatcher
@@ -84,6 +86,16 @@ def main(cli_args: Optional[list] = None):
         openai_api_key=config.openai_api_key,
     )
 
+    # 3. Instantiate HTTP API Server & Cloudflare Tunnel (Mini App)
+    http_server = HttpApiServer(
+        service=agent_service,
+        topic_repo=topic_repo,
+        port=8765,
+    )
+    http_server.start()
+
+    tunnel = CloudflareTunnel(local_port=8765)
+
     controller = BotController(
         service=agent_service,
         topic_repo=topic_repo,
@@ -91,11 +103,26 @@ def main(cli_args: Optional[list] = None):
         allowed_chat_id=config.allowed_chat_id,
         group_chat_id=config.group_chat_id,
         transcriber=speech_transcriber,
+        tunnel=tunnel,
     )
 
-    # 3. Setup Commands in Telegram
+    # Launch tunnel in background so bot starts polling immediately
+    import threading
+
+    def _start_tunnel():
+        logger.info("Starting Cloudflare Tunnel for Telegram Mini App...")
+        url = tunnel.start(timeout=20.0)
+        if url:
+            logger.info("Mini App is available online at: %s", url)
+        else:
+            logger.warning("Could not obtain Cloudflare Tunnel URL.")
+
+    threading.Thread(target=_start_tunnel, name="TunnelInitThread", daemon=True).start()
+
+    # 4. Setup Commands in Telegram
     telegram_client.set_my_commands([
         {"command": "status", "description": "Ver panel de todos los agentes (Desktop y Terminal)"},
+        {"command": "app", "description": "Abrir la Mini App visual interactiva"},
         {"command": "result", "description": "Ver resultado final del agente"},
         {"command": "new", "description": "Crear un nuevo proyecto/espacio"},
         {"command": "resume", "description": "Reanudar sesión reteniendo contexto previo"},
@@ -107,19 +134,21 @@ def main(cli_args: Optional[list] = None):
         {"command": "help", "description": "Ver ayuda completa"},
     ])
 
-    # 4. Graceful Shutdown Handlers
+    # 5. Graceful Shutdown Handlers
     def handle_exit(signum, frame):
         logger.info("Termination signal received. Shutting down gracefully...")
         state_watcher.stop()
+        http_server.stop()
+        tunnel.stop()
         sys.exit(0)
 
     signal.signal(signal.SIGINT, handle_exit)
     signal.signal(signal.SIGTERM, handle_exit)
 
-    # 5. Start Background State Watcher
+    # 6. Start Background State Watcher
     state_watcher.start()
 
-    # 6. Telegram Polling Loop
+    # 7. Telegram Polling Loop
     logger.info("Bot polling loop running. Ready for incoming commands.")
     offset = None
 

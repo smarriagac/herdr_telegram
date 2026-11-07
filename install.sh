@@ -27,6 +27,12 @@ echo "[+] Installing bot package and scripts..."
 cp -rf "${SCRIPT_DIR}/src/"* "${CONFIG_DIR}/"
 chmod +x "${CONFIG_DIR}/bot.py"
 
+if [ -d "${SCRIPT_DIR}/web/dist" ]; then
+    echo "[+] Installing Telegram Mini App assets..."
+    mkdir -p "${CONFIG_DIR}/web"
+    cp -rf "${SCRIPT_DIR}/web/dist" "${CONFIG_DIR}/web/"
+fi
+
 CONFIG_IS_NEW=0
 if [ ! -f "${CONFIG_DIR}/config.json" ]; then
     echo "[+] Creating initial config template in ${CONFIG_DIR}/config.json..."

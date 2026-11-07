@@ -13,8 +13,8 @@ logger = logging.getLogger("herdr-bridge.controller")
 
 PERSISTENT_KEYBOARD = {
     "keyboard": [
-        [{"text": "🤖 Mis Agentes"}, {"text": "➕ Nuevo Agente"}],
-        [{"text": "📄 Ver Salida"}, {"text": "❓ Ayuda / Comandos"}],
+        [{"text": "🤖 Mis Agentes"}, {"text": "📱 Mini App"}],
+        [{"text": "📄 Ver Salida"}, {"text": "➕ Nuevo Agente"}],
     ],
     "resize_keyboard": True,
     "persistent": True,
@@ -32,6 +32,7 @@ class BotController:
         allowed_chat_id: int,
         group_chat_id: Optional[int] = None,
         transcriber: Optional[Any] = None,
+        tunnel: Optional[Any] = None,
     ):
         self.service = service
         self.topic_repo = topic_repo
@@ -39,6 +40,17 @@ class BotController:
         self.allowed_chat_id = allowed_chat_id
         self.group_chat_id = group_chat_id
         self.transcriber = transcriber
+        self.tunnel = tunnel
+
+    def get_app_url(self) -> Optional[str]:
+        """Resolves the live HTTPS URL for the Telegram Mini App."""
+        if not self.tunnel:
+            return None
+        if hasattr(self.tunnel, "public_url"):
+            return self.tunnel.public_url
+        if callable(self.tunnel):
+            return self.tunnel()
+        return str(self.tunnel)
 
     def process_update(self, update: Dict[str, Any]):
         """Processes a single update object."""
@@ -119,10 +131,13 @@ class BotController:
         # 3. Persistent keyboard triggers
         clean_lower = text.lower()
         if clean_lower in ("🤖 mis agentes", "mis agentes"):
-            resp, markup = self.service.build_status_reply()
+            resp, markup = self.service.build_status_reply(app_url=self.get_app_url())
             self.telegram.send_message(
                 chat_id, resp, reply_markup=markup, message_thread_id=thread_id
             )
+            return
+        elif clean_lower in ("📱 mini app", "mini app", "app"):
+            self._send_mini_app(chat_id, thread_id)
             return
         elif clean_lower in ("➕ nuevo agente", "nuevo agente"):
             self._prompt_new_agent(chat_id, thread_id)
@@ -163,10 +178,12 @@ class BotController:
                 message_thread_id=thread_id,
             )
         elif cmd in ("/status", "/agents"):
-            resp, markup = self.service.build_status_reply()
+            resp, markup = self.service.build_status_reply(app_url=self.get_app_url())
             self.telegram.send_message(
                 chat_id, resp, reply_markup=markup, message_thread_id=thread_id
             )
+        elif cmd in ("/app", "/miniapp", "/web"):
+            self._send_mini_app(chat_id, thread_id)
         elif cmd == "/new":
             if not args:
                 self._prompt_new_agent(chat_id, thread_id)
@@ -273,7 +290,7 @@ class BotController:
 
         if action == "refresh":
             self.telegram.answer_callback_query(cq_id, "Actualizando...")
-            text, markup = self.service.build_status_reply()
+            text, markup = self.service.build_status_reply(app_url=self.get_app_url())
             if msg_id:
                 self.telegram.edit_message_text(
                     chat_id, msg_id, text, reply_markup=markup
@@ -428,10 +445,36 @@ class BotController:
         resp = self.service.send_prompt(target, transcribed_text)
         self.telegram.send_message(chat_id, resp, message_thread_id=thread_id)
 
+    def _send_mini_app(self, chat_id: int, thread_id: Optional[int]):
+        app_url = self.get_app_url()
+        if app_url:
+            msg = (
+                "╭─ 📱 <b>Herdr Mini App</b>\n"
+                "╰──────────────────────────\n\n"
+                "Panel táctil interactivo para monitorear agentes, ver terminales y enviar órdenes en tiempo real."
+            )
+            markup = {
+                "inline_keyboard": [
+                    [{"text": "🚀 Abrir Mini App", "web_app": {"url": app_url}}],
+                    [{"text": "🔄 Actualizar Panel", "callback_data": "act|refresh"}],
+                ]
+            }
+            self.telegram.send_message(
+                chat_id, msg, reply_markup=markup, message_thread_id=thread_id
+            )
+        else:
+            self.telegram.send_message(
+                chat_id,
+                "⏳ <i>El túnel seguro HTTPS para la Mini App se está iniciando o no está disponible todavía. Intentá de nuevo en unos momentos o usá /status.</i>",
+                message_thread_id=thread_id,
+            )
+
     def _build_help_text(self) -> str:
         return (
             "╭─ 🤖 <b>Herdr Telegram Bridge — Ayuda</b>\n"
             "╰──────────────────────────\n\n"
+            "📱 <b>Mini App Web (TMA):</b>\n"
+            "• <code>/app</code>: Abrir la Mini App visual interactiva dentro de Telegram.\n\n"
             "💬 <b>En Temas Dedicados (#📁 proyecto):</b>\n"
             "• Escribí directamente cualquier texto para enviarlo como prompt al agente.\n"
             "• <code>/result</code>: Ver el resultado final o resumen del agente.\n"

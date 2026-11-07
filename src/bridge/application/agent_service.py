@@ -105,7 +105,9 @@ class AgentBridgeService:
             return thread_id
         return None
 
-    def build_status_reply(self) -> Tuple[str, Dict[str, Any]]:
+    def build_status_reply(
+        self, app_url: Optional[str] = None
+    ) -> Tuple[str, Dict[str, Any]]:
         """Constructs an interactive status dashboard of all running agents."""
         agents, err = self.driver.list_agents()
         if agents is None:
@@ -115,22 +117,26 @@ class AgentBridgeService:
             )
 
         if not agents:
+            empty_kb = [
+                [
+                    {"text": "➕ Nuevo Agente", "callback_data": "act|quick_new"},
+                    {"text": "🔄 Actualizar", "callback_data": "act|refresh"},
+                ]
+            ]
+            if app_url:
+                empty_kb.insert(0, [{"text": "📱 Abrir Mini App", "web_app": {"url": app_url}}])
             return (
                 "🤖 <b>No hay agentes activos en ejecución.</b>\n\n"
                 "Podés iniciar uno tocando <b>➕ Nuevo Agente</b> o con <code>/new &lt;nombre&gt;</code>.",
-                {
-                    "inline_keyboard": [
-                        [
-                            {"text": "➕ Nuevo Agente", "callback_data": "act|quick_new"},
-                            {"text": "🔄 Actualizar", "callback_data": "act|refresh"},
-                        ]
-                    ]
-                },
+                {"inline_keyboard": empty_kb},
             )
 
         topics = self.topic_repo.load_topics()
         lines = [f"🤖 <b>Agentes Activos ({len(agents)})</b>\n"]
-        buttons: List[List[Dict[str, str]]] = []
+        buttons: List[List[Dict[str, Any]]] = []
+
+        if app_url:
+            buttons.append([{"text": "📱 Abrir Mini App", "web_app": {"url": app_url}}])
 
         for ag in agents:
             st = ag.status
