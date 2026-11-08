@@ -112,21 +112,26 @@ def main(cli_args: Optional[list] = None):
     def _start_tunnel():
         logger.info("Starting Cloudflare Tunnel for Telegram Mini App...")
         attempts = 0
-        while attempts < 12:
+        while attempts < 20:
             attempts += 1
             url = tunnel.start(timeout=25.0)
-            if url:
+            if url and "api.trycloudflare.com" not in url:
                 logger.info("Mini App is available online at: %s", url)
                 ok = telegram_client.set_chat_menu_button(
                     menu_button={"type": "web_app", "text": "Mini App", "web_app": {"url": url}}
                 )
                 if ok:
                     logger.info("Telegram chat menu button configured with Mini App URL.")
-                break
-            logger.warning(
-                "Could not obtain Cloudflare Tunnel URL (attempt %d/12). Retrying in 5s...",
-                attempts,
-            )
+                    break
+                else:
+                    logger.warning(
+                        "Could not set Telegram menu button (network/API error). Retrying in 5s..."
+                    )
+            else:
+                logger.warning(
+                    "Could not obtain Cloudflare Tunnel URL (attempt %d/20). Retrying in 5s...",
+                    attempts,
+                )
             time.sleep(5)
 
     threading.Thread(target=_start_tunnel, name="TunnelInitThread", daemon=True).start()

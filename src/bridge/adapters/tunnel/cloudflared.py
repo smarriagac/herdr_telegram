@@ -44,9 +44,15 @@ class CloudflareTunnel:
             )
             return None
 
-        if self._process and self._process.poll() is None:
+        if (
+            self._process
+            and self._process.poll() is None
+            and self.public_url
+            and "api.trycloudflare.com" not in self.public_url
+        ):
             return self.public_url
 
+        self.stop()
         self._url_ready_event.clear()
         cmd = [
             self.cloudflared_bin,
@@ -92,9 +98,13 @@ class CloudflareTunnel:
                 if not line:
                     break
                 m = url_regex.search(line)
-                if m and not self.public_url:
-                    self.public_url = m.group(0)
-                    self._url_ready_event.set()
+                if m:
+                    cand = m.group(0)
+                    if "api.trycloudflare.com" in cand:
+                        continue
+                    if not self.public_url:
+                        self.public_url = cand
+                        self._url_ready_event.set()
         except Exception as e:
             logger.debug("Tunnel reader closed: %s", e)
 
