@@ -41,6 +41,8 @@ class TelegramClient(TelegramPort):
                 desc = err_data.get("description", "")
                 if "message is not modified" in desc.lower():
                     return {"ok": False, "result": "not_modified"}
+                if "too many requests" in desc.lower():
+                    time.sleep(3)
                 logger.error("Telegram API HTTP %d for %s: %s", e.code, method, desc)
                 return err_data
             except Exception:
@@ -48,6 +50,7 @@ class TelegramClient(TelegramPort):
                 return None
         except Exception as e:
             logger.error("Network error calling Telegram API %s: %s", method, e)
+            time.sleep(2)
             return None
 
     def send_message(
@@ -187,6 +190,7 @@ class TelegramClient(TelegramPort):
         res = self._call_api("getUpdates", payload, timeout=timeout + 10)
         if res and res.get("ok"):
             return res.get("result", [])
+        time.sleep(2)
         return []
 
     def set_my_commands(self, commands: List[Dict[str, str]]) -> bool:
